@@ -27,6 +27,7 @@ def get_message(service, msg_id):
         )
 
         decoded_message = {}
+        
 
         if len(message["payload"]["parts"]) > 0:
             for part in message["payload"]["parts"]:
