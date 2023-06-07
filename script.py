@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from bs4 import BeautifulSoup
 import re
+from pprint import pprint
 
 text_plain = "text/plain"
 text_html = "text/html"
@@ -17,7 +18,13 @@ text_html = "text/html"
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 
+"""
+
+Todo: if mimetype = multipart then we may have to go deeper into part nesting to get body and data
+"""
+
 def get_message(service, msg_id):
+
     try:
         message = (
             service.users()
@@ -27,17 +34,17 @@ def get_message(service, msg_id):
         )
 
         decoded_message = {}
-        
 
         if len(message["payload"]["parts"]) > 0:
             for part in message["payload"]["parts"]:
                 mime_type = part["mimeType"]
-                data = part["body"]["data"]
-                decoded_data = base64.urlsafe_b64decode(data).decode("utf-8")
-                if mime_type == text_plain and text_plain not in decoded_message:
-                    decoded_message[text_plain] = decoded_data
-                elif mime_type == text_html and text_html not in decoded_message:
-                    decoded_message[text_html] = decoded_data
+                if "data" in part["body"]:
+                    data = part["body"]["data"]
+                    decoded_data = base64.urlsafe_b64decode(data).decode("utf-8")
+                    if mime_type == text_plain and text_plain not in decoded_message:
+                        decoded_message[text_plain] = decoded_data
+                    elif mime_type == text_html and text_html not in decoded_message:
+                        decoded_message[text_html] = decoded_data
         else:
             mime_type = message["mimeType"]
             data = message["body"]["data"]
@@ -52,6 +59,7 @@ def get_message(service, msg_id):
 
 
 def search_messages(service, search_string):
+
     try:
         search_ids = (
             service.users()
@@ -93,16 +101,32 @@ def parse_html(email_html):
     with open('lululemon.html', 'w') as f:
         f.write(text)
 
-    rows = soup.findAll("td")
+    """
+    This code will look up each item one at a time
 
-    for row in rows:
-        print(row)
+    tshirts = soup.find_all(string=re.compile(r'\bt-shirt\b', re.IGNORECASE))
+    shorts = soup.find_all(string=re.compile(r'\bshort\b', re.IGNORECASE))
+    pants = soup.find_all(string=re.compile(r'\bpant\b', re.IGNORECASE))
+
+    images = soup.find_all('img')
+    
+    for image in images:
+        print(image['src'])
+    """
+
+    
+    items = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey"]
+    pattern = re.compile(r'\b(?:' + '|'.join(items) + r')\b', re.IGNORECASE)
+    
+    for element in soup.find_all(string=pattern):
+        print(element.parent.text)
 
 def main():
     receipt_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total" '
-    item_key_words = '("shirt" OR "shorts" OR "pants" OR "shoes" OR "hoodie" OR "jacket" OR "coat") '
-    date_range = 'after:' + str(date.today() - timedelta(weeks=52))
-    search_string = receipt_key_words + item_key_words + date_range
+    item_key_words = '("shirt" OR "short" OR "pant" OR "shoes" OR "hoodie" OR "jacket" OR "coat") '
+    #date_range = 'after:' + str(date.today() - timedelta(weeks=52))
+    #search_string = receipt_key_words + item_key_words + date_range
+    search_string = receipt_key_words + item_key_words
     creds = authenticate()
     service = build("gmail", "v1", credentials=creds)
     message_ids = search_messages(service, search_string)
@@ -110,9 +134,11 @@ def main():
     emails = []
     for message_id in message_ids:
         message = get_message(service, message_id)
-        emails.append(message)
+        if message != {}:
+            emails.append(message)
 
     parse_html(emails[0][text_html])
+
 """
     for email in emails:
         if text_html in email:
