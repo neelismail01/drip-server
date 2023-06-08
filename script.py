@@ -101,23 +101,23 @@ def parse_html(email_html):
     with open('receipt.html', 'w') as f:
         f.write(text)
 
-    """
-    Todo
-    - what to do with duplicate images
-    - mapping images to item
-    """
+    item_map = {}
+    categories = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey", "towel", "face covering"]
 
     # get item names from order
-    categories = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey", "towel", "face covering"]
     item_names = []
     for category in categories:
         pattern = re.compile(r'\b' + re.escape(category) + r'\b', re.IGNORECASE)
         item_names.extend(soup.find_all(string=pattern))
     item_names = list(set(item_names))
-    print(item_names)
+
+    temp_names = []
+    for element in item_names:
+        cleaned_element = re.sub(r'^\s+|\s+$', '', element)
+        temp_names.append(cleaned_element)
+    item_names = temp_names
 
     # get item images
-    item_images = []
     for image in soup.find_all('img'):
         alt_text = image.get('alt', '').lower()
         for item_name in item_names:
@@ -125,11 +125,21 @@ def parse_html(email_html):
             matching_words = [word for word in item_words if word in alt_text]
             matching_percentage = len(matching_words) / len(item_words)
             if matching_percentage > 0.65:
-                item_images.append(image['src'])
-    item_images = list(set(item_images))
-    # Print the item images
-    for image_src in item_images:
-       print(image_src)
+                if item_name in item_map:
+                    item_map[item_name].append(image['src'])
+                else:
+                    item_map[item_name] = [image['src']]
+
+    # add items with no images to dictionary
+    for item_name in item_names:
+        if item_name not in item_map:
+            item_map[item_name] = ["no image available"]
+
+    # print results
+    for item_name, item_images in item_map.items():
+        print(f"Item: {item_name}")
+        print(f"Images: {item_images}")
+        print()
 
 def main():
     receipt_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total" '
@@ -147,7 +157,7 @@ def main():
         if message != {}:
             emails.append(message)
 
-    parse_html(emails[0][text_html])
+    parse_html(emails[2][text_html])
 
 """
     for email in emails:
