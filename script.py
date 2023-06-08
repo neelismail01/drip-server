@@ -98,28 +98,38 @@ def authenticate():
 def parse_html(email_html):
     soup = BeautifulSoup(email_html, 'html.parser')
     text = soup.prettify()
-    with open('lululemon.html', 'w') as f:
+    with open('receipt.html', 'w') as f:
         f.write(text)
 
     """
-    This code will look up each item one at a time
-
-    tshirts = soup.find_all(string=re.compile(r'\bt-shirt\b', re.IGNORECASE))
-    shorts = soup.find_all(string=re.compile(r'\bshort\b', re.IGNORECASE))
-    pants = soup.find_all(string=re.compile(r'\bpant\b', re.IGNORECASE))
-
-    images = soup.find_all('img')
-    
-    for image in images:
-        print(image['src'])
+    Todo
+    - what to do with duplicate images
+    - mapping images to item
     """
 
-    
-    items = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey"]
-    pattern = re.compile(r'\b(?:' + '|'.join(items) + r')\b', re.IGNORECASE)
-    
-    for element in soup.find_all(string=pattern):
-        print(element.parent.text)
+    # get item names from order
+    categories = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey", "towel", "face covering"]
+    item_names = []
+    for category in categories:
+        pattern = re.compile(r'\b' + re.escape(category) + r'\b', re.IGNORECASE)
+        item_names.extend(soup.find_all(string=pattern))
+    item_names = list(set(item_names))
+    print(item_names)
+
+    # get item images
+    item_images = []
+    for image in soup.find_all('img'):
+        alt_text = image.get('alt', '').lower()
+        for item_name in item_names:
+            item_words = re.findall(r'\b\w+\b', item_name.lower())  # Extract individual words from item name
+            matching_words = [word for word in item_words if word in alt_text]
+            matching_percentage = len(matching_words) / len(item_words)
+            if matching_percentage > 0.65:
+                item_images.append(image['src'])
+    item_images = list(set(item_images))
+    # Print the item images
+    for image_src in item_images:
+       print(image_src)
 
 def main():
     receipt_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total" '
