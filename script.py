@@ -19,8 +19,9 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 
 """
-
-Todo: if mimetype = multipart then we may have to go deeper into part nesting to get body and data
+Todo:
+- if mimetype = multipart then we may have to go deeper into part nesting to get body and data
+- get brand name from sender email (string before .com or .ca)
 """
 
 def get_message(service, msg_id):
@@ -98,26 +99,28 @@ def authenticate():
 def parse_html(email_html):
     soup = BeautifulSoup(email_html, 'html.parser')
     text = soup.prettify()
+    # create html file for email
     with open('receipt.html', 'w') as f:
         f.write(text)
 
     item_map = {}
     categories = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey", "towel", "face covering"]
 
-    # get item names from order
+    # get item names from order and remove duplicates
     item_names = []
     for category in categories:
         pattern = re.compile(r'\b' + re.escape(category) + r'\b', re.IGNORECASE)
         item_names.extend(soup.find_all(string=pattern))
     item_names = list(set(item_names))
 
+    # remove any white space before or after the item names
     temp_names = []
     for element in item_names:
         cleaned_element = re.sub(r'^\s+|\s+$', '', element)
         temp_names.append(cleaned_element)
     item_names = temp_names
 
-    # get item images
+    # get item images => map item names to item images
     for image in soup.find_all('img'):
         alt_text = image.get('alt', '').lower()
         for item_name in item_names:
