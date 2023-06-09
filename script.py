@@ -34,7 +34,24 @@ def get_message(service, msg_id):
             .execute()
         )
 
+        email = {}
         decoded_message = {}
+        brand = ""
+
+        for header in message["payload"]["headers"]:
+            if header["name"] == "From":
+                sender = header["value"].split('<', 1)[0].strip()
+                if "@" in sender:
+                    if ".com" in sender:
+                        at_index = sender.find("@")
+                        com_index = sender.find(".com")
+                        brand = sender[at_index + 1:com_index].capitalize()
+                    else:
+                        at_index = sender.find("@")
+                        com_index = sender.find(".ca")
+                        brand = sender[at_index + 1:com_index].capitalize()
+                else:
+                    brand = sender
 
         if len(message["payload"]["parts"]) > 0:
             for part in message["payload"]["parts"]:
@@ -54,7 +71,10 @@ def get_message(service, msg_id):
             elif mime_type == text_html and text_html not in decoded_message:
                 decoded_message[text_html] = decoded_data
 
-        return decoded_message
+        email["decoded_message"] = decoded_message
+        email["brand"] = brand
+
+        return email
     except Exception as error:
         print("An error occurred in get_message: %s" % error)
 
@@ -96,7 +116,9 @@ def authenticate():
             token.write(creds.to_json())
     return creds
 
-def parse_html(email_html):
+def parse_html(email):
+    email_html = email["decoded_message"][text_html]
+    brand = email["brand"]
     soup = BeautifulSoup(email_html, 'html.parser')
     text = soup.prettify()
     # create html file for email
@@ -138,36 +160,56 @@ def parse_html(email_html):
         if item_name not in item_map:
             item_map[item_name] = ["no image available"]
 
-    # print results
-    for item_name, item_images in item_map.items():
-        print(f"Item: {item_name}")
-        print(f"Images: {item_images}")
-        print()
+    # Convert the item map to an array of item dictionaries
+    order_items = [{'item_name': key, 'images': value} for key, value in item_map.items()]
+    raw_order = {}
+    raw_order[brand] = order_items
+
+    # final output cleaned up
+    order = {}
+    for brand, items in raw_order.items():
+        order["brand"] = brand
+        order["items"] = items
+
+    return order
+
+    """
+    This is what each order looks like as returned by the function
+
+    {
+        'brand': 'Lululemon',
+        'items': [
+            {
+                'item_name': 'Commission Slim-Fit Pant 32" *Warpstreme',
+                'images': ['https://images.lululemon.com/is/image/lululemon/LM5AF2S_032476_1']
+            }
+        ]
+    }
+    """
 
 def main():
     receipt_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total" '
     item_key_words = '("shirt" OR "short" OR "pant" OR "shoes" OR "hoodie" OR "jacket" OR "coat") '
+    exclude = '-subject:(Fwd: OR Forwarded) -cc:youremail@gmail.com -bcc:youremail@gmail.com'
     #date_range = 'after:' + str(date.today() - timedelta(weeks=52))
     #search_string = receipt_key_words + item_key_words + date_range
-    search_string = receipt_key_words + item_key_words
+    search_string = receipt_key_words + item_key_words + exclude
     creds = authenticate()
     service = build("gmail", "v1", credentials=creds)
     message_ids = search_messages(service, search_string)
 
     emails = []
     for message_id in message_ids:
-        message = get_message(service, message_id)
-        if message != {}:
-            emails.append(message)
+        email = get_message(service, message_id)
+        if email["decoded_message"] != {}:
+            emails.append(email)
 
-    parse_html(emails[2][text_html])
-
-"""
+    orders = []
     for email in emails:
-        if text_html in email:
-            parse_html(email[text_html])
-            break
-"""
+        if text_html in email["decoded_message"]:
+            orders.append(parse_html(email))
+    
+    pprint(orders)
 
 if __name__ == "__main__":
     main()
