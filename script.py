@@ -7,7 +7,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer, Comment
 import re
 from pprint import pprint
 
@@ -41,38 +41,42 @@ def get_message(service, msg_id):
         for header in message["payload"]["headers"]:
             if header["name"] == "From":
                 sender = header["value"].split('<', 1)[0].strip()
+                sender = sender.replace("\\", "")
+                sender = re.sub(r'"', '', sender)
                 if "@" in sender:
                     if ".com" in sender:
                         at_index = sender.find("@")
                         com_index = sender.find(".com")
-                        brand = sender[at_index + 1:com_index].capitalize()
+                        brand = sender[at_index + 1:com_index]
                     else:
                         at_index = sender.find("@")
                         com_index = sender.find(".ca")
-                        brand = sender[at_index + 1:com_index].capitalize()
+                        brand = sender[at_index + 1:com_index]
                 else:
                     brand = sender
 
-        if len(message["payload"]["parts"]) > 0:
-            for part in message["payload"]["parts"]:
-                mime_type = part["mimeType"]
-                if "data" in part["body"]:
-                    data = part["body"]["data"]
-                    decoded_data = base64.urlsafe_b64decode(data).decode("utf-8")
-                    if mime_type == text_plain and text_plain not in decoded_message:
-                        decoded_message[text_plain] = decoded_data
-                    elif mime_type == text_html and text_html not in decoded_message:
-                        decoded_message[text_html] = decoded_data
-        else:
-            mime_type = message["mimeType"]
-            data = message["body"]["data"]
-            if mime_type == text_plain and text_plain not in decoded_message:
-                decoded_message[text_plain] = decoded_data
-            elif mime_type == text_html and text_html not in decoded_message:
-                decoded_message[text_html] = decoded_data
+        if "parts" in message["payload"]:
+            if len(message["payload"]["parts"]) > 0:
+                for part in message["payload"]["parts"]:
+                    mime_type = part["mimeType"]
+                    if "data" in part["body"]:
+                        data = part["body"]["data"]
+                        decoded_data = base64.urlsafe_b64decode(data).decode("utf-8")
+                        if mime_type == text_plain and text_plain not in decoded_message:
+                            decoded_message[text_plain] = decoded_data
+                        elif mime_type == text_html and text_html not in decoded_message:
+                            decoded_message[text_html] = decoded_data
+            else:
+                mime_type = message["mimeType"]
+                data = message["body"]["data"]
+                if mime_type == text_plain and text_plain not in decoded_message:
+                    decoded_message[text_plain] = decoded_data
+                elif mime_type == text_html and text_html not in decoded_message:
+                    decoded_message[text_html] = decoded_data
+
 
         email["decoded_message"] = decoded_message
-        email["brand"] = brand
+        email["brand"] = ' '.join(word.capitalize() for word in brand.split())
 
         return email
     except Exception as error:
@@ -117,22 +121,36 @@ def authenticate():
     return creds
 
 def parse_html(email):
+
     email_html = email["decoded_message"][text_html]
     brand = email["brand"]
+
+    # function that will disregard any item matches in html code that has been commented out
+    def is_visible(element):
+        if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
+            return False
+        if isinstance(element, Comment):
+            return False
+        return True
+
     soup = BeautifulSoup(email_html, 'html.parser')
     text = soup.prettify()
+
     # create html file for email
     with open('receipt.html', 'w') as f:
         f.write(text)
 
     item_map = {}
-    categories = ["t-shirt", "shirt", "short", "pant", "shoes", "hoodie", "jacket", "coat", "jersey", "towel", "face covering"]
+    categories = ["t-shirt", "tee", "shirt", "short", "shorts", "pant", "pants", "shoes", "hoodie", 
+                "sweater", "sweatshirt", "jacket", "coat", "jersey", "towel", "face covering", "jeans"]
 
     # get item names from order and remove duplicates
     item_names = []
     for category in categories:
         pattern = re.compile(r'\b' + re.escape(category) + r'\b', re.IGNORECASE)
-        item_names.extend(soup.find_all(string=pattern))
+        matches = soup.find_all(string=pattern)
+        visible_matches = [match for match in matches if is_visible(match)]
+        item_names.extend(visible_matches)
     item_names = list(set(item_names))
 
     # remove any white space before or after the item names
@@ -188,12 +206,15 @@ def parse_html(email):
     """
 
 def main():
-    receipt_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total" '
-    item_key_words = '("shirt" OR "short" OR "pant" OR "shoes" OR "hoodie" OR "jacket" OR "coat") '
+    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment'
+    body_key_words = '("order" OR "purchase" OR "transaction")'
+    date_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total"'
+    item_key_words = '("t-shirt" OR "tee" OR "shirt" OR "short" OR "shorts" OR "pant" OR "pants" OR "shoes" OR "hoodie" OR "sweater" OR "sweatshirt" OR "jacket" OR "coat" OR "jersey" OR "towel" OR "face covering")'
+    subject_key_words = 'subject:(shipped OR receipt OR invoice OR confirmation OR order)'
     exclude = '-subject:(Fwd: OR Forwarded) -cc:youremail@gmail.com -bcc:youremail@gmail.com'
     #date_range = 'after:' + str(date.today() - timedelta(weeks=52))
-    #search_string = receipt_key_words + item_key_words + date_range
-    search_string = receipt_key_words + item_key_words + exclude
+    #search_string = body_key_words + date_key_words + item_key_words + subject_key_words
+    search_string = query
     creds = authenticate()
     service = build("gmail", "v1", credentials=creds)
     message_ids = search_messages(service, search_string)
