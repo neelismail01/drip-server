@@ -198,6 +198,13 @@ def parse_html(email):
         to_add["images"] = item["images"]
         items.append(to_add)
 
+    for item in items:
+        item_name = item['item_name'].lower()
+        for category in categories:
+            if category in item_name:
+                item['tag'] = category
+                break
+
     return items
 
     """
