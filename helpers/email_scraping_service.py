@@ -220,6 +220,10 @@ def parse_html(email):
 def get_product_page_link(brand, product_name):
     API_KEY = "AIzaSyDLvRwgY8OXyNb4a7bas4aT-gXQvHkRwTE"
     SEARCH_ENGINE_ID = "d1062150d54a04ec6"
+
+    brand = "".join(brand.split()).lower()
+    product_name = product_name.lower()
+
     query = brand + " " + product_name
 
     service = build(
@@ -231,25 +235,28 @@ def get_product_page_link(brand, product_name):
         cx=SEARCH_ENGINE_ID
     ).execute()
 
-    for item in result['items']:
-        link = item['link']
+    brand_website_base_link = None
+    if "items" in result:
+        for item in result['items']:
+            link = item['link']
+            link_match = re.match("(.*)(\.com|\.ca)(.*)", link)
+            if link_match:
+                brand_in_link = brand in link_match.group(1)
 
-        link_match = re.match("(.*)\.(com|ca)(.*)", link)
-        if link_match:
-            brand_in_link = brand in link_match.group(1)
+                product_name_in_link = False
+                product_name_words_in_link = 0
+                for word in product_name:
+                    if word in link_match.group(3):
+                        product_name_words_in_link += 1
+                if product_name_words_in_link / len(product_name) > 0.5:
+                    product_name_in_link = True
+                
+                if brand_in_link and product_name_in_link:
+                    return link
+                if not brand_website_base_link and brand_in_link:
+                    brand_website_base_link = link_match.group(1) + link_match.group(2)
 
-            product_name_in_link = False
-            product_name_words_in_link = 0
-            for word in product_name:
-                if word in link_match.group(3):
-                    product_name_words_in_link += 1
-            if product_name_words_in_link / len(product_name) > 0.5:
-                product_name_in_link = True
-            
-            if brand_in_link and product_name_in_link:
-                return link
-
-    return None
+    return brand_website_base_link
 
 def get_items():
     query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment'
