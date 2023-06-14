@@ -217,6 +217,40 @@ def parse_html(email):
     }
     """
 
+def get_product_page_link(brand, product_name):
+    API_KEY = "AIzaSyDLvRwgY8OXyNb4a7bas4aT-gXQvHkRwTE"
+    SEARCH_ENGINE_ID = "d1062150d54a04ec6"
+    query = brand + " " + product_name
+
+    service = build(
+        "customsearch", "v1", developerKey=API_KEY
+    )
+
+    result = service.cse().list(
+        q=query,
+        cx=SEARCH_ENGINE_ID
+    ).execute()
+
+    for item in result['items']:
+        link = item['link']
+
+        link_match = re.match("(.*)\.(com|ca)(.*)", link)
+        if link_match:
+            brand_in_link = brand in link_match.group(1)
+
+            product_name_in_link = False
+            product_name_words_in_link = 0
+            for word in product_name:
+                if word in link_match.group(3):
+                    product_name_words_in_link += 1
+            if product_name_words_in_link / len(product_name) > 0.5:
+                product_name_in_link = True
+            
+            if brand_in_link and product_name_in_link:
+                return link
+
+    return None
+
 def get_items():
     query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment'
     body_key_words = '("order" OR "purchase" OR "transaction")'
@@ -243,5 +277,8 @@ def get_items():
             items = parse_html(email)
             for item in items:
                 total_items.append(item)
+
+    for item in total_items:
+        item["product_page_link"] = get_product_page_link(item["brand"], item["item_name"])
 
     return total_items
