@@ -24,13 +24,13 @@ Todo:
 - get brand name from sender email (string before .com or .ca)
 """
 
-def get_message(service, msg_id):
+def get_message(service, msg_id, user_email_address):
 
     try:
         message = (
             service.users()
             .messages()
-            .get(userId="me", id=msg_id, format="full")
+            .get(userId=user_email_address, id=msg_id, format="full")
             .execute()
         )
 
@@ -83,13 +83,13 @@ def get_message(service, msg_id):
         print("An error occurred in get_message: %s" % error)
 
 
-def search_messages(service, search_string):
+def search_messages(service, search_string, user_email_address):
 
     try:
         search_ids = (
             service.users()
             .messages()
-            .list(userId="me", q=search_string)
+            .list(userId=user_email_address, q=search_string)
             .execute()
         )
 
@@ -258,8 +258,8 @@ def get_product_page_link(brand, product_name):
 
     return brand_website_base_link
 
-def get_items():
-    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment'
+def get_items(user_email_address):
+    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment -(unsubscribe) -(“manage preferences”) -(“email preferences”) -("manage emails")'
     body_key_words = '("order" OR "purchase" OR "transaction")'
     date_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total"'
     item_key_words = '("t-shirt" OR "tee" OR "shirt" OR "short" OR "shorts" OR "pant" OR "pants" OR "shoes" OR "hoodie" OR "sweater" OR "sweatshirt" OR "jacket" OR "coat" OR "jersey" OR "towel" OR "face covering")'
@@ -270,11 +270,11 @@ def get_items():
     search_string = query
     creds = authenticate()
     service = build("gmail", "v1", credentials=creds)
-    message_ids = search_messages(service, search_string)
+    message_ids = search_messages(service, search_string, user_email_address)
 
     emails = []
     for message_id in message_ids:
-        email = get_message(service, message_id)
+        email = get_message(service, message_id, user_email_address)
         if email["decoded_message"] != {}:
             emails.append(email)
 
