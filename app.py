@@ -11,8 +11,8 @@ cors = CORS(app)
 client = MongoClient("mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority")
 db = client["drip"]
 
-@app.route('/login', methods=["POST"])
-def login():
+@app.route('/signup', methods=["POST"])
+def signup():
     users_collection = db['users']
     items_collection = db['items']
     data = request.json
@@ -22,7 +22,7 @@ def login():
     # check if user already exists
     existing_user = users_collection.find_one({'email': email})
     if existing_user:
-        return 'User already exists in the collection'
+        return 'User already exists', 201
 
     # insert user into users collection
     user = {
@@ -42,7 +42,21 @@ def login():
             item['users'] = [user["email"]]
             items_collection.insert_one(item)
 
-    return 'Data received and saved to users collection'
+    return 'User signed up - data received and saved to items collection', 201
+
+@app.route('/login', methods=["POST"])
+def login():
+    users_collection = db['users']
+    data = request.json
+    email = data.get('email')
+
+    # check if user already exists
+    existing_user = users_collection.find_one({'email': email})
+    if existing_user:
+        return 'User logged in', 201
+
+    # User does not exist, return an error message
+    return 'Login error - no account associated with this email', 401
 
 @app.route('/items', methods=["GET", "POST", "DELETE"])
 def items():
