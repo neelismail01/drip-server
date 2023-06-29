@@ -15,6 +15,7 @@ db = client["drip"]
 def signup():
     users_collection = db['users']
     items_collection = db['items']
+    brands_collection = db['brands']
     data = request.json
     email = data.get('email')
     name = data.get('name')
@@ -42,6 +43,13 @@ def signup():
             item['users'] = [user["email"]]
             items_collection.insert_one(item)
 
+        existing_brand = brands_collection.find_one({'brand_name': item['brand']})
+        if existing_brand:
+            brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
+        else:
+            brand = {'brand_name': item['brand'], 'purchasedCount': 1}
+            brands_collection.insert_one(brand)
+
     return 'User signed up - data received and saved to items collection', 201
 
 @app.route('/login', methods=["POST"])
@@ -65,6 +73,7 @@ def items():
         email = request.args.get('email')
         query = {"users": email}
         items = list(collection.find(query))
+        print(items)
         json_items = dumps(items)
         return json_items
     # change to update vs insert
