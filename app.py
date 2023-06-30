@@ -14,8 +14,6 @@ db = client["drip"]
 @app.route('/signup', methods=["POST"])
 def signup():
     users_collection = db['users']
-    items_collection = db['items']
-    brands_collection = db['brands']
     data = request.json
     email = data.get('email')
     name = data.get('name')
@@ -23,7 +21,7 @@ def signup():
     # check if user already exists
     existing_user = users_collection.find_one({'email': email})
     if existing_user:
-        return 'User already exists', 201
+        return 'User already exists', 401
 
     # insert user into users collection
     user = {
@@ -32,25 +30,7 @@ def signup():
     }
     users_collection.insert_one(user)
 
-    # insert items into items collection
-    user_items = get_items(user["email"])
-    for item in user_items:
-        # if item is already in collection, just append user to users array for that item
-        existing_item = items_collection.find_one({'item_name': item['item_name']})
-        if existing_item:
-            items_collection.update_one({'_id': existing_item['_id']}, {'$addToSet': {'users': user["email"]}})
-        else:
-            item['users'] = [user["email"]]
-            items_collection.insert_one(item)
-
-        existing_brand = brands_collection.find_one({'brand_name': item['brand']})
-        if existing_brand:
-            brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
-        else:
-            brand = {'brand_name': item['brand'], 'purchasedCount': 1}
-            brands_collection.insert_one(brand)
-
-    return 'User signed up - data received and saved to items collection', 201
+    return 'User signed up', 201
 
 @app.route('/login', methods=["POST"])
 def login():
@@ -73,15 +53,30 @@ def items():
         email = request.args.get('email')
         query = {"users": email}
         items = list(collection.find(query))
-        print(items)
         json_items = dumps(items)
         return json_items
-    # change to update vs insert
     elif request.method == "POST":
-        # Get the data from email scraper
-        data = get_items("")
-        result = collection.insert_many(data)
-        return "Success", 201
+        data = request.json
+        email = data.get('email')
+        # insert items into items collection
+        user_items = get_items(email)
+        for item in user_items:
+            # if item is already in collection, just append user to users array for that item
+            existing_item = collection.find_one({'item_name': item['item_name']})
+            if existing_item:
+                collection.update_one({'_id': existing_item['_id']}, {'$addToSet': {'users': email}})
+            else:
+                item['users'] = [email]
+                collection.insert_one(item)
+
+            brands_collection = db['brands']
+            existing_brand = brands_collection.find_one({'brand_name': item['brand']})
+            if existing_brand:
+                brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
+            else:
+                brand = {'brand_name': item['brand'], 'purchasedCount': 1}
+                brands_collection.insert_one(brand)
+        return "Successfully added items to database", 201
     elif request.method == "DELETE":
         result = collection.delete_many({})
         return f"Deleted {result.deleted_count} documents."
