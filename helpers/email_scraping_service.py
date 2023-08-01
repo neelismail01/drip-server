@@ -142,7 +142,7 @@ def parse_html(email):
 
     item_map = {}
     categories = ["t-shirt", "tee", "shirt", "short", "shorts", "pant", "pants", "shoes", "hoodie", 
-                "sweater", "sweatshirt", "jacket", "coat", "jersey", "towel", "face covering", "jeans"]
+                "sweater", "sweatshirt", "jacket", "blazer", "coat", "jersey", "towel", "face covering", "jeans"]
 
     # get item names from order and remove duplicates
     item_names = []
@@ -214,6 +214,7 @@ def parse_html(email):
         brand: "Lululemon",
         item_name: "Commission Slim-Fit Pant 32" *Warpstreme",
         images: ['https://images.lululemon.com/is/image/lululemon/LM5AF2S_032476_1']
+        tag = ["pant"]
     }
     """
 
@@ -259,7 +260,7 @@ def get_product_page_link(brand, product_name):
     return brand_website_base_link
 
 def get_items(user_email_address):
-    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR short OR pant OR shoes OR hoodie OR sweater OR jacket OR coat) -has:attachment -(unsubscribe) -(“manage preferences”) -(“email preferences”) -("manage emails")'
+    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR tee OR shorts OR short OR pants OR pant OR shoes OR hoodie OR sweater OR sweatshirt OR jacket OR coat) -has:attachment -(unsubscribe) -(“manage preferences”) -(“email preferences”) -("manage emails")'
     body_key_words = '("order" OR "purchase" OR "transaction")'
     date_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total"'
     item_key_words = '("t-shirt" OR "tee" OR "shirt" OR "short" OR "shorts" OR "pant" OR "pants" OR "shoes" OR "hoodie" OR "sweater" OR "sweatshirt" OR "jacket" OR "coat" OR "jersey" OR "towel" OR "face covering")'
