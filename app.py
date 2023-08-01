@@ -184,6 +184,50 @@ def wishlist():
         wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
         return "Successfully deleted item from wish list", 200
 
+@app.route('/liked_items', methods=["GET", "POST", "DELETE"])
+def liked_items():
+    users_collection = db['users']
+    items_collection = db['items']
+    liked_items_collection = db['liked_items']
+
+    if request.method == "POST":
+        data = request.json
+        email = data.get('email')
+        item = data.get('item')
+        user = users_collection.find_one({'email': email})
+        item_id = ObjectId(item['_id'])
+        if not liked_items_collection.find_one({'user_id': user['_id'], 'item_id': item_id}):
+            liked_items_collection.insert_one({
+                'item_id': item_id,
+                'user_id': user['_id'],
+            })
+            return "Successfully added item to liked items", 200
+        else:
+            return "Item is already in liked items", 400
+    elif request.method == "GET":
+        email = request.args.get('email')
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        liked_items = liked_items_collection.find({'user_id': ObjectId(user_id)})
+        item_ids = [item['item_id'] for item in liked_items]
+        if (item_ids):
+            items = items_collection.find({'_id': {'$in': item_ids}})
+            items_list = list(items)
+            for item in items_list:
+                item['_id'] = str(item['_id'])
+            return jsonify(items_list), 200
+        else:
+            return [], 201
+    elif request.method == "DELETE":
+        data = request.json
+        email = data.get('email')
+        item = data.get('item')
+        item_id = ObjectId(item['_id'])
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
+        return "Successfully deleted item from liked items", 200
+
 @app.route('/items', methods=["GET", "POST", "DELETE"])
 def items():
     collection = db['items']
