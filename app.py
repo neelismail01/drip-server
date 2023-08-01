@@ -55,6 +55,7 @@ def inbox():
     users_collection = db['users']
     items_collection = db['items']
     brands_collection = db['brands']
+    closet_collection = db['closet']
 
     if request.method == "POST":
         data = request.json
@@ -66,12 +67,12 @@ def inbox():
             # item logic
             existing_item = items_collection.find_one({'item_name': item['item_name']})
             if existing_item:
-                is_item_in_inbox = existing_item['_id'] in user.get('inbox', [])
-                if is_item_in_inbox == False:
-                    users_collection.update_one(
-                        {'_id': user['_id']},
-                        {'$push': {'inbox': existing_item['_id']}}
-                    )
+                if not closet_collection.find_one({'item_id': existing_item['_id'], 'user_id': user['_id']}):
+                    if existing_item['_id'] not in user.get('inbox', []):
+                        users_collection.update_one(
+                            {'_id': user['_id']},
+                            {'$push': {'inbox': existing_item['_id']}}
+                        )
             else:
                 new_item = items_collection.insert_one(item)
                 item_id = new_item.inserted_id
@@ -138,6 +139,50 @@ def closet():
             return jsonify(items_list), 200
         else:
             return [], 201
+
+@app.route('/wishlist', methods=["GET", "POST", "DELETE"])
+def wishlist():
+    users_collection = db['users']
+    items_collection = db['items']
+    wishlist_collection = db['wishlist']
+
+    if request.method == "POST":
+        data = request.json
+        email = data.get('email')
+        item = data.get('item')
+        user = users_collection.find_one({'email': email})
+        item_id = ObjectId(item['_id'])
+        if not wishlist_collection.find_one({'user_id': user['_id'], 'item_id': item_id}):
+            wishlist_collection.insert_one({
+                'item_id': item_id,
+                'user_id': user['_id'],
+            })
+            return "Successfully added item to the wishlist", 200
+        else:
+            return "Item is already in the wishlist", 400
+    elif request.method == "GET":
+        email = request.args.get('email')
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        wishlist_items = wishlist_collection.find({'user_id': ObjectId(user_id)})
+        item_ids = [item['item_id'] for item in wishlist_items]
+        if (item_ids):
+            items = items_collection.find({'_id': {'$in': item_ids}})
+            items_list = list(items)
+            for item in items_list:
+                item['_id'] = str(item['_id'])
+            return jsonify(items_list), 200
+        else:
+            return [], 201
+    elif request.method == "DELETE":
+        data = request.json
+        email = data.get('email')
+        item = data.get('item')
+        item_id = ObjectId(item['_id'])
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
+        return "Successfully deleted item from wish list", 200
 
 @app.route('/items', methods=["GET", "POST", "DELETE"])
 def items():
