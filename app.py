@@ -236,28 +236,6 @@ def items():
         for item in all_items:
             item['_id'] = str(item['_id'])
         return jsonify(all_items), 200
-    elif request.method == "POST":
-        data = request.json
-        email = data.get('email')
-        # insert items into items collection
-        user_items = get_items(email)
-        for item in user_items:
-            # if item is already in collection, just append user to users array for that item
-            existing_item = collection.find_one({'item_name': item['item_name']})
-            if existing_item:
-                collection.update_one({'_id': existing_item['_id']}, {'$addToSet': {'users': email}})
-            else:
-                item['users'] = [email]
-                collection.insert_one(item)
-
-            brands_collection = db['brands']
-            existing_brand = brands_collection.find_one({'brand_name': item['brand']})
-            if existing_brand:
-                brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
-            else:
-                brand = {'brand_name': item['brand'], 'purchasedCount': 1}
-                brands_collection.insert_one(brand)
-        return "Successfully added items to the database", 201
     elif request.method == "DELETE":
         result = collection.delete_many({})
         return f"Deleted {result.deleted_count} documents."
@@ -276,9 +254,10 @@ def brand_items(brand_name):
     items_collection = db['items']
     brand = brands_collection.find_one({'brand_name': brand_name})
     if brand:
-        items = items_collection.find({"brand": brand_name})
-        json_items = dumps(items)
-        return json_items, 200
+        items = list(items_collection.find({"brand": brand_name}))
+        for item in items:
+            item['_id'] = str(item['_id'])
+        return jsonify(items), 200
     else:
         return "Brand not found", 404
 
