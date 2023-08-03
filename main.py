@@ -4,12 +4,51 @@ from helpers.email_scraping_service import get_items
 from pymongo import MongoClient
 from bson import ObjectId
 from bson.json_util import dumps
+import os
 
 app = Flask(__name__)
 cors = CORS(app)
 
 client = MongoClient("mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority")
 db = client["drip"]
+
+index_fields = {
+    'item_searchindex': ['item_name', 'brand', 'tag'],
+    'user_searchindex': ['name', 'email'],
+    'brand_searchindex': ['brand_name']
+}
+
+def init_search(query, index_name, index_fields):
+    path = index_fields.get(index_name)
+
+    search_engine = [
+        {
+            '$search': {
+                'index': index_name,
+                'text': {
+                    'query': query,
+                    'path': path
+                }
+            }
+        }
+    ]
+    return search_engine
+
+@app.route('/search', methods=['GET'])
+def search():
+    index_collections = {
+        'item_searchindex': db['items'],
+        'brand_searchindex': db['brands'],
+        'user_searchindex': db['users']
+    }
+    query = request.args.get('query')
+    index_name = request.args.get('index')
+    collection = index_collections.get(index_name)
+    search_engine = init_search(query, index_name, index_fields)
+    search_results = list(collection.aggregate(search_engine))
+    for result in search_results:
+        result['_id'] = str(result['_id'])
+    return jsonify(search_results)
 
 @app.route('/signup', methods=["POST"])
 def signup():
@@ -262,4 +301,4 @@ def brand_items(brand_name):
         return "Brand not found", 404
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
