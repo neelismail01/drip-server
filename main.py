@@ -95,6 +95,16 @@ def autocomplete_search():
         result['_id'] = str(result['_id'])
     return jsonify(search_results)
 
+@app.route('/similar_items', methods=['GET'])
+def similar_items():
+    collection = db["items"]
+    tag = request.args.get('tag')
+    items = collection.find({"tag": tag})
+    items_list = list(items)
+    for item in items_list:
+            item['_id'] = str(item['_id'])
+    return jsonify(items_list), 200
+
 @app.route('/signup', methods=["POST"])
 def signup():
     users_collection = db['users']
