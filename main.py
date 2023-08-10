@@ -12,6 +12,60 @@ cors = CORS(app)
 client = MongoClient("mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority")
 db = client["drip"]
 
+@app.route('/outfits', methods=["GET", "POST", "DELETE"])
+def outfits():
+    users_collection = db['users']
+    outfits_collection = db['outfits']
+
+    if request.method == "POST":
+        data = request.json
+        email = data.get('email')
+        items = data.get('items')
+        vibe = data.get('vibe')
+        caption = data.get('caption')
+
+        user = users_collection.find_one({'email': email})
+        item_ids = [ObjectId(item["_id"]) for item in items]
+
+        existing_outfit = outfits_collection.find_one({'items': item_ids})
+        if existing_outfit:
+            return "Outfit already exist in the database", 400
+
+        outfits_collection.insert_one({
+            'user_id': user['_id'],
+            'items': item_ids,
+            'caption': caption,
+            'vibe': vibe,
+            'images': []
+        })
+        return "Successfully added items to the database", 200
+    elif request.method == "GET":
+        email = request.args.get('email')
+        user = users_collection.find_one({'email': email})
+        pipeline = [
+            {
+                '$match': {'user_id': user['_id']}
+            },
+            {
+                '$lookup': {
+                    'from': 'items',
+                    'localField': 'items',
+                    'foreignField': '_id',
+                    'as': 'items'
+                }
+            }
+        ]
+
+        outfits = list(outfits_collection.aggregate(pipeline))
+
+        for outfit in outfits:
+            outfit['_id'] = str(outfit['_id'])
+            outfit['user_id'] = str(outfit['user_id'])
+            for item in outfit['items']:
+                item['_id'] = str(item['_id'])
+
+        return jsonify(outfits), 200
+
 index_fields = {
     'item_searchindex': ['item_name', 'brand', 'tag'],
     'user_searchindex': ['name', 'email'],
