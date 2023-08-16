@@ -182,6 +182,11 @@ def signup():
     users_collection = db['users']
     data = request.json
     email = data.get('email')
+    name = data.get('name')
+    username = data.get('username')
+    phone_number = data.get('phone_number')
+    profile_pic = data.get('profile_pic')
+    shopping_preference = data.get('shopping_preference')
 
     # check if user already exists
     existing_user = users_collection.find_one({'email': email})
@@ -191,11 +196,11 @@ def signup():
     # insert user into users collection
     user = {
         'email': email,
-        'name': "",
-        'username': "",
-        'phone_number': "",
-        'profile_pic': "",
-        'shopping_preference': "",
+        'name': name,
+        'username': username,
+        'phone_number': phone_number,
+        'profile_pic': profile_pic,
+        'shopping_preference': shopping_preference,
         'inbox': []
     }
     users_collection.insert_one(user)
@@ -227,6 +232,7 @@ def inbox():
         data = request.json
         email = data.get('email')
         user = users_collection.find_one({'email': email})
+        gender = user['shopping_preference']
         user_items = get_items(email)
 
         for item in user_items:
@@ -240,6 +246,7 @@ def inbox():
                             {'$push': {'inbox': existing_item['_id']}}
                         )
             else:
+                item['gender'] = gender
                 new_item = items_collection.insert_one(item)
                 item_id = new_item.inserted_id
                 users_collection.update_one(
@@ -431,8 +438,8 @@ def brand(brand_name):
         brand['_id'] = str(brand['_id'])
         return jsonify(brand), 200
     
-@app.route('/brands', methods=["GET"])
-def brands():
+@app.route('/outfit_brands', methods=["GET"])
+def outfit_brands():
     collection = db['brands']
     if request.method == "GET":
         brand_names = request.args.getlist("brand_names[]")
