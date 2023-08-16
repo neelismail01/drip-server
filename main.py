@@ -12,6 +12,25 @@ cors = CORS(app)
 client = MongoClient("mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority")
 db = client["drip"]
 
+@app.route('/profile', methods=["PUT"])
+def profile():
+    if request.method == "PUT":
+        users_collection = db['users']
+        data = request.json
+        email = data.get('email')
+        profile_picture = data.get('profile_picture')
+        
+        # check if user already exists
+        existing_user = users_collection.find_one({'email': email})
+        if existing_user:
+            users_collection.update_one(
+                {'email': email},
+                {'$set': {'profile_picture': profile_picture}}
+            )
+            return 'User profile updated', 200
+        else:
+            return 'User not found', 404
+
 @app.route('/outfits', methods=["GET", "POST", "DELETE"])
 def outfits():
     users_collection = db['users']
@@ -23,6 +42,7 @@ def outfits():
         items = data.get('items')
         vibe = data.get('vibe')
         caption = data.get('caption')
+        pictures = data.get('pictures')
 
         user = users_collection.find_one({'email': email})
         item_ids = [ObjectId(item["_id"]) for item in items]
@@ -36,7 +56,7 @@ def outfits():
             'items': item_ids,
             'caption': caption,
             'vibe': vibe,
-            'images': []
+            'images': pictures
         })
         return "Successfully added items to the database", 200
     elif request.method == "GET":
@@ -55,9 +75,7 @@ def outfits():
                 }
             }
         ]
-
         outfits = list(outfits_collection.aggregate(pipeline))
-
         for outfit in outfits:
             outfit['_id'] = str(outfit['_id'])
             outfit['user_id'] = str(outfit['user_id'])
@@ -265,28 +283,37 @@ def closet():
         items = data.get('items')
         user = users_collection.find_one({'email': email})
         for item in items:
-            item_id = ObjectId(item['_id'])
+            item_id = ObjectId(item['product']['_id'])
             closet_collection.insert_one({
                 'item_id': item_id,
                 'user_id': user['_id'],
-                'caption': "",
-                'images': []
+                'caption': item['caption'],
+                'images': item['pictures']
             })
         return "Successfully added items to the database", 200
     elif request.method == "GET":
         email = request.args.get('email')
         user = users_collection.find_one({'email': email})
         user_id = user['_id']
-        closet_items = closet_collection.find({'user_id': ObjectId(user_id)})
-        item_ids = [item['item_id'] for item in closet_items]
-        if (item_ids):
-            items = items_collection.find({'_id': {'$in': item_ids}})
-            items_list = list(items)
-            for item in items_list:
-                item['_id'] = str(item['_id'])
-            return jsonify(items_list), 200
-        else:
-            return [], 201
+        
+        closet_documents = closet_collection.find({'user_id': ObjectId(user_id)})
+        closet_items = []
+
+        for closet_doc in closet_documents:
+            item_id = closet_doc['item_id']
+            item_doc = items_collection.find_one({'_id': item_id})
+
+            if item_doc:
+                item_doc['_id'] = str(item_doc['_id'])
+                closet_item = {
+                    'closet_id': str(closet_doc['_id']),
+                    'item': item_doc,
+                    'caption': closet_doc['caption'],
+                    'images': closet_doc['images']
+                }
+                closet_items.append(closet_item)
+
+        return jsonify(closet_items), 200
 
 @app.route('/wishlist', methods=["GET", "POST", "DELETE"])
 def wishlist():
@@ -388,13 +415,32 @@ def items():
         result = collection.delete_many({})
         return f"Deleted {result.deleted_count} documents."
 
-@app.route('/brands', methods=["GET"])
-def brands():
+@app.route('/all_brands', methods=["GET"])
+def all_brands():
     collection = db['brands']
     if request.method == "GET":
         brands = list(collection.find().sort('purchaseCount', -1))
         json_brands = dumps(brands)
         return json_brands, 201
+    
+@app.route('/brands/<brand_name>', methods=["GET"])
+def brand(brand_name):
+    collection = db['brands']
+    if request.method == "GET":
+        brand = collection.find_one({'brand_name': brand_name})
+        brand['_id'] = str(brand['_id'])
+        return jsonify(brand), 200
+    
+@app.route('/brands', methods=["GET"])
+def brands():
+    collection = db['brands']
+    if request.method == "GET":
+        brand_names = request.args.getlist("brand_names[]")
+        query = {"brand_name": {"$in": brand_names}}
+        brands = list(collection.find(query))
+        for brand in brands:
+            brand['_id'] = str(brand['_id'])
+        return jsonify(brands), 200
 
 @app.route('/items/<brand_name>', methods=["GET"])
 def brand_items(brand_name):
