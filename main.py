@@ -365,6 +365,52 @@ def wishlist():
         user_id = user['_id']
         wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
         return "Successfully deleted item from wish list", 200
+    
+@app.route('/outfit_wishlist', methods=["GET", "POST", "DELETE"])
+def outfit_wishlist():
+    users_collection = db['users']
+    outfits_collection = db['outfits']
+    outfit_wishlist_collection = db['outfit_wishlist']
+
+    if request.method == "POST":
+        data = request.json
+        email = data.get('email')
+        outfit = data.get('outfit')
+        user = users_collection.find_one({'email': email})
+        outfit_id = ObjectId(outfit['_id'])
+        if not outfit_wishlist_collection.find_one({'user_id': user['_id'], 'outfit_id': outfit_id}):
+            outfit_wishlist_collection.insert_one({
+                'outfit_id': outfit_id,
+                'user_id': user['_id'],
+            })
+            return "Successfully added outfit to the wishlist", 200
+        else:
+            return "Outfit is already in the wishlist", 400
+    elif request.method == "GET":
+        email = request.args.get('email')
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        wishlist_outfits = outfit_wishlist_collection.find({'user_id': ObjectId(user_id)})
+        outfit_ids = [outfit['outfit_id'] for outfit in wishlist_outfits]
+        if (outfit_ids):
+            outfits = list(outfits_collection.find({'_id': {'$in': outfit_ids}}))
+            for outfit in outfits:
+                outfit['_id'] = str(outfit['_id'])
+                outfit['user_id'] = str(outfit['user_id'])
+                for i in range(len(outfit['items'])):
+                    outfit['items'][i] = str(outfit['items'][i])
+            return jsonify(outfits), 200
+        else:
+            return [], 201
+    elif request.method == "DELETE":
+        data = request.json
+        email = data.get('email')
+        outfit = data.get('outfit')
+        outfit_id = ObjectId(outfit['_id'])
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        outfit_wishlist_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
+        return "Successfully deleted item from wish list", 200
 
 @app.route('/liked_items', methods=["GET", "POST", "DELETE"])
 def liked_items():
@@ -409,6 +455,52 @@ def liked_items():
         user_id = user['_id']
         liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
         return "Successfully deleted item from liked items", 200
+    
+@app.route('/liked_outfits', methods=["GET", "POST", "DELETE"])
+def liked_outfits():
+    users_collection = db['users']
+    outfits_collection = db['outfits']
+    liked_outfits_collection = db['liked_outfits']
+
+    if request.method == "POST":
+        data = request.json
+        email = data.get('email')
+        outfit = data.get('outfit')
+        user = users_collection.find_one({'email': email})
+        outfit_id = ObjectId(outfit['_id'])
+        if not liked_outfits_collection.find_one({'user_id': user['_id'], 'outfit_id': outfit_id}):
+            liked_outfits_collection.insert_one({
+                'outfit_id': outfit_id,
+                'user_id': user['_id'],
+            })
+            return "Successfully added item to liked outfits", 200
+        else:
+            return "Item is already in liked outfits", 400
+    elif request.method == "GET":
+        email = request.args.get('email')
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        liked_outfits = liked_outfits_collection.find({'user_id': ObjectId(user_id)})
+        outfit_ids = [outfit['outfit_id'] for outfit in liked_outfits]
+        if (outfit_ids):
+            outfits = list(outfits_collection.find({'_id': {'$in': outfit_ids}}))
+            for outfit in outfits:
+                outfit['_id'] = str(outfit['_id'])
+                outfit['user_id'] = str(outfit['user_id'])
+                for i in range(len(outfit['items'])):
+                    outfit['items'][i] = str(outfit['items'][i])
+            return jsonify(outfits), 200
+        else:
+            return [], 201
+    elif request.method == "DELETE":
+        data = request.json
+        email = data.get('email')
+        outfit = data.get('outfit')
+        outfit_id = ObjectId(outfit['_id'])
+        user = users_collection.find_one({'email': email})
+        user_id = user['_id']
+        liked_outfits_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
+        return "Successfully deleted item from liked outfits", 200
 
 @app.route('/items', methods=["GET", "POST", "DELETE"])
 def items():
