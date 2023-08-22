@@ -141,8 +141,31 @@ def parse_html(email):
         f.write(text)
 
     item_map = {}
-    categories = ["t-shirt", "tee", "shirt", "short", "shorts", "pant", "pants", "shoes", "hoodie", 
-                "sweater", "sweatshirt", "jacket", "blazer", "coat", "jersey", "towel", "face covering", "jeans"]
+    categories = ["t-shirt", "tee", "shirt", "short", "shorts", "pant", "pants", "shoes", "shoe", "hoodie", 
+                "sweater", "sweatshirt", "crewneck", "jacket", "coat", "jersey", "towel", "face covering", "linen"
+                "jean", "jeans", "khaki", "khakis", "chino", "chinos", "pajamas", "dress shirt", "polo shirt", "robe", 
+                "swim trunks", "swim shorts", "socks", "sneaker", "sneakers", "boots", "boot", "sandals", "sandal", "flip-flops", "loafers", 
+                "slippers", "hat", "belt", "backpack", "scarf", "sunglasses", "tie", "necklace", "chain", "cap", "boxer", "boxers",
+                "bracelet", "bracelets", "cardigan", "denim", "earring", "earrings", "glove", "gloves", "handbag", "handbags", "legging",
+                "leggings", "leotard", "leotards", "tights", "lingerie", "dress", "dresses", "blouse", "skirt", "skirts", "raincoat", "raincoats",
+                "parka", "parkas", "sleepwear", "sportswear", "stilletos", "stiletto", "bodysuit", "suit", "swimwear", "tuxedo", 
+                "tracksuit", "cufflinks", "cufflink", "purse", "tuque", "flannel"]
+    
+    item_types = ["accessories", "watches", "jewelry", "cosmetics", "formal wear", "footwear", "outerwear", "tops", "bottoms"]
+    
+    accessories = ["tie", "cufflink", "cufflinks", "handbag", "purse", "hat", "cap", "tuque", "glove", "gloves", "belt", 
+                   "suspender", "suspenders", "eyewear", "glasses", "sunglasses", "wallet", "socks", "stockings"]
+    watches = ["watch"]
+    jewelry = ["earring", "earrings", "necklace", "bracelet", "ring", "chain"]
+    cosmetics = ["makeup", "beauty products", "hair products", "skin cleansers", "lotion", "perfume", "cologne"]
+    formal_wear = ["suit", "tuxedo"]
+    footwear = ["boot", "boots", "shoe", "shoes", "sandal", "sandals", "loafer", "loafers", "flip-flops", 
+                "slipper", "slippers", "sneaker", "sneakers", "stilettos"]
+    outerwear = ["parka", "raincoat", "cardigan", "coat", "jacket"]
+    tops = ["blouse", "polo", "shirt", "t-shirt", "tee", "dress shirt", "hoodie", "jersey", "crewneck", "sweater", 
+            "sweatshirt", "flannel", "linen"]
+    bottoms = ["skirt", "khaki", "khakis", "pant", "pants", "sweatpant", "sweatpants", "chino", "chinos", "jeans", 
+               "jean", "tights", "leggings", "swim shorts", "swim trunks", "short", "shorts"]
 
     # get item names from order and remove duplicates
     item_names = []
@@ -151,7 +174,12 @@ def parse_html(email):
         matches = soup.find_all(string=pattern)
         visible_matches = [match for match in matches if is_visible(match)]
         item_names.extend(visible_matches)
-    item_names = list(set(item_names))
+    
+    # get rid of any extra items found that are just a category (i.e. standalone string "pants" exists somewhere in email)
+    filtered_item_names = [item_name for item_name in item_names if item_name.lower() not in categories]
+    
+    # remove duplicates
+    item_names = list(set(filtered_item_names))
 
     # remove any white space before or after the item names
     temp_names = []
@@ -198,12 +226,27 @@ def parse_html(email):
         to_add["images"] = item["images"]
         items.append(to_add)
 
+    # add inital tag
     for item in items:
         item_name = item['item_name'].lower()
         for category in categories:
             if category in item_name:
-                item['tag'] = category
+                item['tags'] = [category]
                 break
+
+    
+    def determine_item_type(tag):
+        for item_type, item_type_list in zip(item_types, [accessories, watches, jewelry, cosmetics, formal_wear, footwear, outerwear, tops, bottoms]):
+            if tag in item_type_list:
+                return item_type
+        return None  # If no item type is found
+
+    # add broader category to list of tags
+    for item in items:
+        item_tag = item["tags"][0]
+        item_type = determine_item_type(item_tag)
+        if item_type:
+            item["tags"] = [item_type, item_tag]
 
     return items
 
@@ -260,14 +303,14 @@ def get_product_page_link(brand, product_name):
     return brand_website_base_link
 
 def get_items(user_email_address):
-    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (shirt OR tee OR shorts OR short OR pants OR pant OR shoes OR hoodie OR sweater OR sweatshirt OR jacket OR coat) -has:attachment -(unsubscribe) -(“manage preferences”) -(“email preferences”) -("manage emails")'
-    body_key_words = '("order" OR "purchase" OR "transaction")'
+    query = '("order" OR "purchase" OR "transaction") subject:(receipt OR invoice OR confirmation OR order OR confirmed OR processed OR shipped OR delivery) (tuxedos OR tracksuits OR swimwear OR suits OR stilettos OR sportswear OR skirts OR sleepwear OR parkas OR panties OR raincoats OR lingerie OR tights OR leotards OR leggings OR handbags OR gloves OR earrings OR denim OR cardigan OR bracelets OR boxers OR cap OR khakis OR chinos OR pyjamas OR robe OR polo OR swim OR socks OR boots OR sneakers OR sandals OR flip-flops OR loafers OR slippers OR hat OR belt OR backpack OR scarf OR sunglasses OR tie OR necklace OR chain OR shirt OR tee OR shorts OR short OR pants OR pant OR shoes OR hoodie OR sweater OR sweatshirt OR jacket OR coat OR jean) -has:attachment -(unsubscribe) -(“manage preferences”) -(“email preferences”) -("manage emails")'
+    """body_key_words = '("order" OR "purchase" OR "transaction")'
     date_key_words = '("(order OR purchase OR transaction) date" OR "date (ordered OR purchased)" "total"'
     item_key_words = '("t-shirt" OR "tee" OR "shirt" OR "short" OR "shorts" OR "pant" OR "pants" OR "shoes" OR "hoodie" OR "sweater" OR "sweatshirt" OR "jacket" OR "coat" OR "jersey" OR "towel" OR "face covering")'
     subject_key_words = 'subject:(shipped OR receipt OR invoice OR confirmation OR order)'
     exclude = '-subject:(Fwd: OR Forwarded) -cc:youremail@gmail.com -bcc:youremail@gmail.com'
-    #date_range = 'after:' + str(date.today() - timedelta(weeks=52))
-    #search_string = body_key_words + date_key_words + item_key_words + subject_key_words
+    date_range = 'after:' + str(date.today() - timedelta(weeks=52))
+    search_string = body_key_words + date_key_words + item_key_words + subject_key_words"""
     search_string = query
     creds = authenticate()
     service = build("gmail", "v1", credentials=creds)
@@ -289,4 +332,14 @@ def get_items(user_email_address):
     for item in total_items:
         item["product_page_link"] = get_product_page_link(item["brand"], item["item_name"])
 
-    return total_items
+    # remove duplicate items
+    unique_item_names = set()
+    unique_items = []
+    for item in total_items:
+        if item['item_name'] not in unique_item_names:
+            unique_item_names.add(item['item_name'])
+            unique_items.append(item)
+
+    pprint(unique_items)
+
+    return unique_items
