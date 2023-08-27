@@ -1,16 +1,38 @@
-from flask import Flask, jsonify, request
+from flask import (
+    Flask,
+    jsonify,
+    request,
+)
+from flask_session import Session
 from flask_cors import CORS
 from helpers.email_scraping_service import get_items
 from pymongo import MongoClient
 from bson import ObjectId
 from bson.json_util import dumps
 import os
+import certifi
+from routes.auth import auth_blueprint
 
 app = Flask(__name__)
 cors = CORS(app)
 
-client = MongoClient("mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority")
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_TYPE"] = "filesystem"
+Session(app)
+
+client = MongoClient(
+    "mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority", tlsCAFile=certifi.where()
+)
 db = client["drip"]
+
+app.config['MONGO_URI'] = "mongodb+srv://nikhil_ismail:homKuf-typtim-4sicqo@cluster0.ml9ppgs.mongodb.net/?retryWrites=true&w=majority"
+
+# Initialize the MongoDB client
+mongo_client = MongoClient(app.config['MONGO_URI'], tlsCAFile=certifi.where())
+app.mongo = mongo_client
+
+# Register the blueprint with the app
+app.register_blueprint(auth_blueprint)
 
 @app.route('/profile', methods=["PUT"])
 def profile():
@@ -207,8 +229,8 @@ def signup():
 
     return 'User signed up', 200
 
-@app.route('/login', methods=["POST"])
-def login():
+@app.route('/login_test', methods=["POST"])
+def login_test():
     users_collection = db['users']
     data = request.json
     email = data.get('email')
@@ -555,5 +577,6 @@ def brand_items(brand_name):
         return "Brand not found", 404
 
 if __name__ == '__main__':
-    #app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-    get_items("nikhil.ismail20@gmail.com")
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    ##get_items("nikhil.ismail20@gmail.com")
