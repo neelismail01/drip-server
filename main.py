@@ -555,5 +555,4 @@ def brand_items(brand_name):
         return "Brand not found", 404
 
 if __name__ == '__main__':
-    #app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-    get_items("nikhil.ismail20@gmail.com")
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
