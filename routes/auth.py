@@ -1,6 +1,6 @@
 from flask import (
-    current_app,
     Blueprint,
+    current_app,
     redirect,
     session,
     url_for
@@ -41,10 +41,10 @@ def callback():
     token = oauth.google.authorize_access_token()
     email = token['userinfo']['email']
     name = token['userinfo']['name']
-    mongo = current_app.mongo
+    db = current_app.mongo.drip
 
     # check if user already exists
-    existing_user = mongo.drip.users.find_one({'email': email})
+    existing_user = db.users.find_one({'email': email})
     if existing_user:
         return 'User already exists', 200
 
@@ -58,7 +58,7 @@ def callback():
         'shopping_preference': None,
         'inbox': []
     }
-    mongo.drip.users.insert_one(user)
+    db.users.insert_one(user)
     session['user'] = token['userinfo']
     return 'User signed up', 200
 
