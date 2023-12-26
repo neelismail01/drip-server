@@ -38,12 +38,11 @@ client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["drip"]
 
 # Register the blueprint with the app
-app.register_blueprint(auth_blueprint)
 app.register_blueprint(brands_blueprint)
 app.register_blueprint(items_blueprint)
 app.register_blueprint(outfits_blueprint)
 app.register_blueprint(search_blueprint)
-app.register_blueprint(user_blueprint)
+app.register_blueprint(user_blueprint, url_prefix='/user')
 
 """@app.route('/profile', methods=["PUT"])
 def profile():
@@ -590,5 +589,5 @@ def brand_items(brand_name):
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(debug=True)
     ##get_items("nikhil.ismail20@gmail.com")

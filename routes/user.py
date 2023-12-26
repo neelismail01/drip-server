@@ -7,6 +7,32 @@ from flask import (
 from bson import ObjectId
 user_blueprint = Blueprint('user', __name__)
 
+@user_blueprint.route('/signin', methods=["POST"])
+def signin():
+    db = current_app.mongo.drip
+
+    data = request.json
+    email = data.get("email")
+    name = data.get("name")
+
+    # check if user already exists
+    existing_user = db.users.find_one({'email': email})
+    if existing_user:
+        return 'User already exists', 200
+
+    # insert user into users collection
+    db.users.insert_one({
+        'email': email,
+        'name': name,
+        'username': None,
+        'phone_number': None,
+        'profile_pic': None,
+        'shopping_preference': None,
+        'inbox': []
+    })
+
+    return 'User created.', 200
+
 @user_blueprint.route('/signup', methods=["POST"])
 def signup():
     db = current_app.mongo.drip
