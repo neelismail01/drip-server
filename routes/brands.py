@@ -20,10 +20,12 @@ def all_brands():
     
 @brands_blueprint.route('/<brand_name>', methods=["GET"])
 def brand(brand_name):
-    collection = db['brands']
     db = current_app.mongo.drip
+    collection = db['brands']
     if request.method == "GET":
         brand = collection.find_one({'brand_name': brand_name})
+        if not brand:
+            return {}, 200
         brand['_id'] = str(brand['_id'])
         return jsonify(brand), 200
     
