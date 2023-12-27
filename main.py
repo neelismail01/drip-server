@@ -14,7 +14,6 @@ import certifi
 
 from constants import MONGO_URI
 
-from routes.auth import auth_blueprint
 from routes.brands import brands_blueprint
 from routes.items import items_blueprint
 from routes.outfits import outfits_blueprint
@@ -589,5 +588,5 @@ def brand_items(brand_name):
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    app.run(debug=True)
+    app.run(debug=True, port=8080)
     ##get_items("nikhil.ismail20@gmail.com")
