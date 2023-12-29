@@ -19,6 +19,7 @@ from routes.items import items_blueprint
 from routes.outfits import outfits_blueprint
 from routes.search import search_blueprint
 from routes.user import user_blueprint
+from routes.social import social_blueprint
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -41,6 +42,7 @@ app.register_blueprint(brands_blueprint)
 app.register_blueprint(items_blueprint)
 app.register_blueprint(outfits_blueprint)
 app.register_blueprint(search_blueprint)
+app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
 
 """@app.route('/profile', methods=["PUT"])
