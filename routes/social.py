@@ -4,7 +4,7 @@ from flask import (
     jsonify,
     request
 )
-import json
+from bson import json_util
 
 social_blueprint = Blueprint('social', __name__)
 
@@ -32,3 +32,15 @@ def follow_user():
         })
 
         return "Successfully sent follow request", 200
+
+@social_blueprint.route('/', methods=["GET"])
+def check_following_relationship():
+    db = current_app.mongo.drip
+    if request.method == "GET":
+        follower_id = request.args.get("follower_id")
+        followee_id = request.args.get("followee_id")
+        relationship = db.social_graph.find_one({
+            "follower_id": follower_id,
+            "followee_id": followee_id
+        })
+        return json_util.dumps(relationship), 200
