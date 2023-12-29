@@ -40,7 +40,7 @@ db = client["drip"]
 # Register the blueprint with the app
 app.register_blueprint(brands_blueprint)
 app.register_blueprint(items_blueprint)
-app.register_blueprint(outfits_blueprint)
+app.register_blueprint(outfits_blueprint, url_prefix="/outfits")
 app.register_blueprint(search_blueprint)
 app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
