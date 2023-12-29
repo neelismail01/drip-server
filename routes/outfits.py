@@ -8,24 +8,20 @@ import os
 import base64
 from google.cloud import storage
 from bson import ObjectId
+from datetime import datetime
 
 outfits_blueprint = Blueprint('outfits', __name__)
-
-# Set the path to your service account key JSON file
-#service_account_key_path = '../service_account_key.json'
-# Set the environment variable
-#os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_key_path
 
 # Initialize GCS client
 def get_storage_client():
     return storage.Client(project="drip-382808")
 
-def upload_image_to_gcs(image_data, bucket_name, destination_blob_name):
+def upload_media_to_gcs(image_data, bucket_name, destination_blob_name, content_type):
     client = get_storage_client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
     # Upload the image data to GCS
-    blob.upload_from_string(image_data, content_type='image/jpeg')
+    blob.upload_from_string(image_data, content_type=content_type)
     # Get the URL of the uploaded image
     return blob.public_url
 
@@ -43,22 +39,35 @@ def outfits():
         caption = data.get('caption')
         pictures = data.get('pictures')
 
-        image_bytes = base64.b64decode(pictures)
-        gcs_picture_url = upload_image_to_gcs(image_bytes, 'drip-bucket-1', 'image1.jpg')
-
         user = users_collection.find_one({'email': email})
         item_ids = [ObjectId(item["_id"]) for item in items]
 
         existing_outfit = outfits_collection.find_one({'items': item_ids})
         if existing_outfit:
             return "Outfit already exist in the database", 400
+        
+        # upload images to GCS and get public URLs
+        media_urls = []
+        for media in pictures:
+            if media["type"] == "image":
+                image_bytes = base64.b64decode(media["data"])
+                destination = "outfit_" + str(user['_id']) + "_" + str(datetime.now()) + ".jpg"
+                gcs_media_url = upload_media_to_gcs(image_bytes, 'drip-bucket-1', destination, 'image/jpeg')
+                media_urls.append(gcs_media_url)
+            elif media["type"] == "video":
+                video_bytes = base64.b64decode(media["data"])
+                destination = "outfit_" + str(user['_id']) + "_" + str(datetime.now()) + ".mp4"
+                gcs_media_url = upload_media_to_gcs(video_bytes, 'drip-bucket-1', destination, 'video/mp4')
+                media_urls.append(gcs_media_url)
+            else:
+                print("Unsupported media format")
 
         outfits_collection.insert_one({
             'user_id': user['_id'],
             'items': item_ids,
             'caption': caption,
             'tags': tags,
-            'images': [gcs_picture_url]
+            'images': media_urls
         })
         return "Successfully added items to the database", 200
     elif request.method == "GET":

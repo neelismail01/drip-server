@@ -5,8 +5,55 @@ from flask import (
     request
 )
 import json
+import os
+import base64
+from google.cloud import storage
+from googleapiclient.discovery import build
+import re
+from datetime import datetime
 from bson import json_util, ObjectId
+
 user_blueprint = Blueprint('user', __name__)
+
+def get_brand_website_link(brand):
+    API_KEY = "AIzaSyDLvRwgY8OXyNb4a7bas4aT-gXQvHkRwTE"
+    SEARCH_ENGINE_ID = "d1062150d54a04ec6"
+
+    brand = "".join(brand.split()).lower()
+
+    query = brand + " official website"
+
+    service = build(
+        "customsearch", "v1", developerKey=API_KEY
+    )
+
+    result = service.cse().list(
+        q=query,
+        cx=SEARCH_ENGINE_ID
+    ).execute()
+
+    brand_website_link = None
+    if "items" in result:
+        for item in result['items']:
+            link = item['link']
+            if re.search("(^https?://(?:www\.)?{}[^/]*\.[a-z]+)".format(re.escape(brand)), link):
+                brand_website_link = link
+                break
+
+    return brand_website_link
+
+# Initialize GCS client
+def get_storage_client():
+    return storage.Client(project="drip-382808")
+
+def upload_media_to_gcs(image_data, bucket_name, destination_blob_name, content_type):
+    client = get_storage_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    # Upload the image data to GCS
+    blob.upload_from_string(image_data, content_type=content_type)
+    # Get the URL of the uploaded image
+    return blob.public_url
 
 @user_blueprint.route('/signin', methods=["POST"])
 def signin():
@@ -101,6 +148,7 @@ def closet():
     users_collection = db['users']
     items_collection = db['items']
     closet_collection = db['closet']
+    brands_collection = db['brands']
 
     if request.method == "POST":
         data = request.json
@@ -115,13 +163,37 @@ def closet():
         pictures = data.get('pictures')
         tags = data.get('tags')
 
+        # upload images to GCS and get public URLs
+        media_urls = []
+        for media in pictures:
+            if media["type"] == "image":
+                image_bytes = base64.b64decode(media["data"])
+                destination = "item_" + str(user['_id']) + "_" + str(datetime.now()) + ".jpg"
+                gcs_media_url = upload_media_to_gcs(image_bytes, 'drip-bucket-1', destination, 'image/jpeg')
+                media_urls.append(gcs_media_url)
+            elif media["type"] == "video":
+                video_bytes = base64.b64decode(media["data"])
+                destination = "item_" + str(user['_id']) + "_" + str(datetime.now()) + ".mp4"
+                gcs_media_url = upload_media_to_gcs(video_bytes, 'drip-bucket-1', destination, 'video/mp4')
+                media_urls.append(gcs_media_url)
+            else:
+                print("Unsupported media format")
+
+        # add brand to brand collection if it does not exist
+        existing_brand = brands_collection.find_one({'brand_name': brand})
+        if existing_brand:
+            brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
+        else:
+            new_brand = {'brand_name': brand, 'purchasedCount': 1, 'logo': ""}
+            brands_collection.insert_one(new_brand)
+
         # add item to item collection
         item = {
             "brand": brand,
             "item_name": name,
-            "images": pictures,
+            "images": media_urls,
             "tags": tags,
-            "product_page_link": "",
+            "product_page_link": get_brand_website_link(brand),
             "gender": gender
         }
         new_item = items_collection.insert_one(item)
@@ -132,7 +204,7 @@ def closet():
             'item_id': item_id,
             'user_id': user['_id'],
             'caption': caption,
-            'images': pictures
+            'images': media_urls
         })
         return "Successfully added item to the items and closet database", 200
     elif request.method == "GET":
