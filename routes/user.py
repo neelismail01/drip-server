@@ -4,7 +4,8 @@ from flask import (
     jsonify,
     request
 )
-from bson import ObjectId
+import json
+from bson import json_util, ObjectId
 user_blueprint = Blueprint('user', __name__)
 
 @user_blueprint.route('/signin', methods=["POST"])
@@ -18,20 +19,31 @@ def signin():
     # check if user already exists
     existing_user = db.users.find_one({'email': email})
     if existing_user:
-        return 'User already exists', 200
+        json_data = json_util.dumps({
+            'id': str(existing_user['_id']),
+            'name': existing_user['name'],
+            'email': existing_user['email'],
+            'username': existing_user['username']
+        })
+        return json_data, 200
 
     # insert user into users collection
-    db.users.insert_one({
+    new_user = {
         'email': email,
         'name': name,
         'username': None,
         'phone_number': None,
         'profile_pic': None,
-        'shopping_preference': None,
-        'inbox': []
+        'shopping_preference': None
+    }
+    db.users.insert_one(new_user)
+    json_data = json_util.dumps({
+        'id': str(new_user['_id']),
+        'name': new_user['name'],
+        'email': new_user['email'],
+        'username': new_user['username']
     })
-
-    return 'User created.', 200
+    return json_data, 200
 
 @user_blueprint.route('/signup', methods=["POST"])
 def signup():
