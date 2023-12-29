@@ -92,18 +92,37 @@ def closet():
 
     if request.method == "POST":
         data = request.json
+
         email = data.get('email')
-        items = data.get('items')
         user = users_collection.find_one({'email': email})
-        for item in items:
-            item_id = ObjectId(item['product']['_id'])
-            closet_collection.insert_one({
-                'item_id': item_id,
-                'user_id': user['_id'],
-                'caption': item['caption'],
-                'images': item['pictures']
-            })
-        return "Successfully added items to the database", 200
+        gender = user['shopping_preference']
+
+        brand = data.get('brand')
+        name = data.get('name')
+        caption = data.get('caption')
+        pictures = data.get('pictures')
+        tags = data.get('tags')
+
+        # add item to item collection
+        item = {
+            "brand": brand,
+            "item_name": name,
+            "images": pictures,
+            "tags": tags,
+            "product_page_link": "",
+            "gender": gender
+        }
+        new_item = items_collection.insert_one(item)
+        item_id = new_item.inserted_id
+
+        # add item to closet collection for respective user
+        closet_collection.insert_one({
+            'item_id': item_id,
+            'user_id': user['_id'],
+            'caption': caption,
+            'images': pictures
+        })
+        return "Successfully added item to the items and closet database", 200
     elif request.method == "GET":
         email = request.args.get('email')
         user = users_collection.find_one({'email': email})

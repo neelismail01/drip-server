@@ -11,14 +11,14 @@ items_blueprint = Blueprint('items', __name__)
 @items_blueprint.route('/', methods=["GET", "POST", "DELETE"])
 def items():
     db = current_app.mongo.drip
-    collection = db['items']
+    items_collection = db['items']
     if request.method == "GET":
-        all_items = list(collection.find())
+        all_items = list(items_collection.find())
         for item in all_items:
             item['_id'] = str(item['_id'])
         return jsonify(all_items), 200
     elif request.method == "DELETE":
-        result = collection.delete_many({})
+        result = items_collection.delete_many({})
         return f"Deleted {result.deleted_count} documents."
 
 @items_blueprint.route('/<brand_name>', methods=["GET"])
