@@ -70,7 +70,8 @@ def signin():
             'id': str(existing_user['_id']),
             'name': existing_user['name'],
             'email': existing_user['email'],
-            'username': existing_user['username']
+            'username': existing_user['username'],
+            'profile_complete': existing_user['profile_complete'],
         })
         return json_data, 200
 
@@ -79,48 +80,30 @@ def signin():
         'email': email,
         'name': name,
         'username': None,
-        'phone_number': None,
         'profile_pic': None,
-        'shopping_preference': None
+        'shopping_preference': None,
+        'profile_complete': False
     }
     db.users.insert_one(new_user)
     json_data = json_util.dumps({
         'id': str(new_user['_id']),
         'name': new_user['name'],
         'email': new_user['email'],
-        'username': new_user['username']
+        'username': new_user['username'],
+        'profile_complete': new_user['profile_complete'],
     })
     return json_data, 200
 
-@user_blueprint.route('/signup', methods=["POST"])
+@user_blueprint.route('/username', methods=["GET"])
 def signup():
     db = current_app.mongo.drip
-    users_collection = db['users']
-    data = request.json
-    email = data.get('email')
-    name = data.get('name')
-    username = data.get('username')
-    phone_number = data.get('phone_number')
-    profile_pic = data.get('profile_pic')
-    shopping_preference = data.get('shopping_preference')
-
-    # check if user already exists
-    existing_user = users_collection.find_one({'email': email})
-    if existing_user:
-        return 'User already exists', 401
-
-    # insert user into users collection
-    users_collection.insert_one({
-        'email': email,
-        'name': name,
-        'username': username,
-        'phone_number': phone_number,
-        'profile_pic': profile_pic,
-        'shopping_preference': shopping_preference,
-        'inbox': []
+    username = request.args.get("username")
+    user = db.users.find_one({
+        "username": username
     })
+    return json_util.dumps(user), 200
 
-    return 'User signed up', 200
+
 
 @user_blueprint.route('/profile', methods=["PUT"])
 def profile():
@@ -128,17 +111,24 @@ def profile():
     if request.method == "PUT":
         users_collection = db['users']
         data = request.json
-        email = data.get('email')
-        profile_picture = data.get('profile_picture')
+        id = data.get('id')
+        username = data.get('username')
+        preference = data.get('preference')
+        birthdate = data.get('birthdate')
         
         # check if user already exists
-        existing_user = users_collection.find_one({'email': email})
+        existing_user = users_collection.find_one({ '_id': ObjectId(id) })
         if existing_user:
             users_collection.update_one(
-                {'email': email},
-                {'$set': {'profile_picture': profile_picture}}
+                {'_id': ObjectId(id) },
+                {'$set': { 
+                    'username': username,
+                    'preference': preference,
+                    'birthdate': birthdate,
+                    'profile_complete': True
+                }}
             )
-            return 'User profile updated', 200
+            return 'User successfully updated', 200
         else:
             return 'User not found', 404
 
