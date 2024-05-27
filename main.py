@@ -45,7 +45,7 @@ app.register_blueprint(search_blueprint)
 app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
 
-"""@app.route('/profile', methods=["PUT"])
+@app.route('/profile', methods=["PUT"])
 def profile():
     if request.method == "PUT":
         users_collection = db['users']
@@ -62,9 +62,9 @@ def profile():
             )
             return 'User profile updated', 200
         else:
-            return 'User not found', 404"""
+            return 'User not found', 404
 
-"""@app.route('/outfits', methods=["GET", "POST", "DELETE"])
+@app.route('/outfits', methods=["GET", "POST", "DELETE"])
 def outfits():
     users_collection = db['users']
     outfits_collection = db['outfits']
@@ -115,9 +115,9 @@ def outfits():
             for item in outfit['items']:
                 item['_id'] = str(item['_id'])
 
-        return jsonify(outfits), 200"""
+        return jsonify(outfits), 200
 
-"""index_fields = {
+index_fields = {
     'item_searchindex': ['item_name', 'brand', 'tag'],
     'user_searchindex': ['name', 'email'],
     'brand_searchindex': ['brand_name']
@@ -198,7 +198,7 @@ def autocomplete_search():
     search_results = list(collection.aggregate(search_engine))
     for result in search_results:
         result['_id'] = str(result['_id'])
-    return jsonify(search_results)"""
+    return jsonify(search_results)
 
 @app.route('/similar_items', methods=['GET'])
 def similar_items():
@@ -210,7 +210,7 @@ def similar_items():
             item['_id'] = str(item['_id'])
     return jsonify(items_list), 200
 
-"""@app.route('/signup', methods=["POST"])
+@app.route('/signup', methods=["POST"])
 def signup():
     users_collection = db['users']
     data = request.json
@@ -238,7 +238,7 @@ def signup():
     }
     users_collection.insert_one(user)
 
-    return 'User signed up', 200"""
+    return 'User signed up', 200
 
 @app.route('/login_test', methods=["POST"])
 def login_test():
@@ -254,7 +254,7 @@ def login_test():
     # User does not exist, return an error message
     return 'Login error - no account associated with this email', 404
 
-"""@app.route('/inbox', methods=["GET", "POST", "DELETE"])
+@app.route('/inbox', methods=["GET", "POST", "DELETE"])
 def inbox():
     users_collection = db['users']
     items_collection = db['items']
@@ -309,9 +309,9 @@ def inbox():
             {'email': email},
             {'$set': {'inbox': []}}
         )
-        return "Successfully deleted items from inbox", 200"""
+        return "Successfully deleted items from inbox", 200
 
-"""@app.route('/closet', methods=["GET", "POST", "DELETE"])
+@app.route('/closet', methods=["GET", "POST", "DELETE"])
 def closet():
     users_collection = db['users']
     items_collection = db['items']
@@ -353,9 +353,9 @@ def closet():
                 }
                 closet_items.append(closet_item)
 
-        return jsonify(closet_items), 200"""
+        return jsonify(closet_items), 200
 
-"""@app.route('/wishlist', methods=["GET", "POST", "DELETE"])
+@app.route('/wishlist', methods=["GET", "POST", "DELETE"])
 def wishlist():
     users_collection = db['users']
     items_collection = db['items']
@@ -397,9 +397,9 @@ def wishlist():
         user = users_collection.find_one({'email': email})
         user_id = user['_id']
         wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
-        return "Successfully deleted item from wish list", 200"""
+        return "Successfully deleted item from wish list", 200
     
-"""@app.route('/outfit_wishlist', methods=["GET", "POST", "DELETE"])
+@app.route('/outfit_wishlist', methods=["GET", "POST", "DELETE"])
 def outfit_wishlist():
     users_collection = db['users']
     outfits_collection = db['outfits']
@@ -443,9 +443,9 @@ def outfit_wishlist():
         user = users_collection.find_one({'email': email})
         user_id = user['_id']
         outfit_wishlist_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
-        return "Successfully deleted item from wish list", 200"""
+        return "Successfully deleted item from wish list", 200
 
-"""@app.route('/liked_items', methods=["GET", "POST", "DELETE"])
+@app.route('/liked_items', methods=["GET", "POST", "DELETE"])
 def liked_items():
     users_collection = db['users']
     items_collection = db['items']
@@ -487,9 +487,9 @@ def liked_items():
         user = users_collection.find_one({'email': email})
         user_id = user['_id']
         liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
-        return "Successfully deleted item from liked items", 200"""
+        return "Successfully deleted item from liked items", 200
     
-""""@app.route('/liked_outfits', methods=["GET", "POST", "DELETE"])
+@app.route('/liked_outfits', methods=["GET", "POST", "DELETE"])
 def liked_outfits():
     users_collection = db['users']
     outfits_collection = db['outfits']
@@ -533,10 +533,9 @@ def liked_outfits():
         user = users_collection.find_one({'email': email})
         user_id = user['_id']
         liked_outfits_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
-        return "Successfully deleted item from liked outfits", 200"
-"""
+        return "Successfully deleted item from liked outfits", 200
 
-"""@app.route('/items', methods=["GET", "POST", "DELETE"])
+@app.route('/items', methods=["GET", "POST", "DELETE"])
 def items():
     collection = db['items']
     if request.method == "GET":
@@ -546,25 +545,25 @@ def items():
         return jsonify(all_items), 200
     elif request.method == "DELETE":
         result = collection.delete_many({})
-        return f"Deleted {result.deleted_count} documents."""
+        return f"Deleted {result.deleted_count} documents."
 
-"""@app.route('/all_brands', methods=["GET"])
+@app.route('/all_brands', methods=["GET"])
 def all_brands():
     collection = db['brands']
     if request.method == "GET":
         brands = list(collection.find().sort('purchaseCount', -1))
         json_brands = dumps(brands)
-        return json_brands, 201"""
+        return json_brands, 201
     
-"""@app.route('/brands/<brand_name>', methods=["GET"])
+@app.route('/brands/<brand_name>', methods=["GET"])
 def brand(brand_name):
     collection = db['brands']
     if request.method == "GET":
         brand = collection.find_one({'brand_name': brand_name})
         brand['_id'] = str(brand['_id'])
-        return jsonify(brand), 200"""
+        return jsonify(brand), 200
     
-"""@app.route('/outfit_brands', methods=["GET"])
+@app.route('/outfit_brands', methods=["GET"])
 def outfit_brands():
     collection = db['brands']
     if request.method == "GET":
@@ -573,9 +572,9 @@ def outfit_brands():
         brands = list(collection.find(query))
         for brand in brands:
             brand['_id'] = str(brand['_id'])
-        return jsonify(brands), 200"""
+        return jsonify(brands), 200
 
-"""@app.route('/items/<brand_name>', methods=["GET"])
+@app.route('/items/<brand_name>', methods=["GET"])
 def brand_items(brand_name):
     brands_collection = db['brands']
     items_collection = db['items']
@@ -586,7 +585,7 @@ def brand_items(brand_name):
             item['_id'] = str(item['_id'])
         return jsonify(items), 200
     else:
-        return "Brand not found", 404"""
+        return "Brand not found", 404
 
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
