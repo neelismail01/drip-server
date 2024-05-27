@@ -71,16 +71,20 @@ def signin():
             'name': existing_user['name'],
             'email': existing_user['email'],
             'username': existing_user['username'],
+            'profile_pic': existing_user['profile_pic'],
+            'preference': existing_user['preference'],
             'profile_complete': existing_user['profile_complete'],
         })
         return json_data, 200
+
+    default_profile_pic = 'https://storage.googleapis.com/drip-bucket-1/default_profile_pic.jpeg'
 
     # insert user into users collection
     new_user = {
         'email': email,
         'name': name,
         'username': None,
-        'profile_pic': None,
+        'profile_pic': default_profile_pic,
         'shopping_preference': None,
         'profile_complete': False
     }
@@ -102,8 +106,6 @@ def signup():
         "username": username
     })
     return json_util.dumps(user), 200
-
-
 
 @user_blueprint.route('/profile', methods=["PUT"])
 def profile():
@@ -131,6 +133,35 @@ def profile():
             return 'User successfully updated', 200
         else:
             return 'User not found', 404
+        
+@user_blueprint.route('/profile-picture', methods=["PUT"])
+def profile_picture():
+    db = current_app.mongo.drip
+    if request.method == "PUT":
+        users_collection = db['users']
+        data = request.json
+        id = data.get('id')
+        profile_pic = data.get('profile_pic')
+        
+        # check if user exists
+        existing_user = users_collection.find_one({ '_id': ObjectId(id) })
+
+        if existing_user:
+            image_bytes = base64.b64decode(profile_pic)
+            destination = "profilePicture_" + str(id) + "_" + str(datetime.now()) + ".jpg"
+            gcs_media_url = upload_media_to_gcs(image_bytes, 'drip-bucket-1', destination, 'image/jpeg')
+
+            users_collection.update_one(
+                {'_id': ObjectId(id) },
+                {'$set': { 
+                    'profile_pic': gcs_media_url,
+                }}
+            )
+            return jsonify({
+                "profile_pic": gcs_media_url,
+            }), 200
+        else:
+            return 'User not found', 404
 
 @user_blueprint.route('/closet', methods=["GET", "POST", "DELETE"])
 def closet():
@@ -145,7 +176,7 @@ def closet():
 
         email = data.get('email')
         user = users_collection.find_one({'email': email})
-        gender = user['shopping_preference']
+        gender = user['preference']
 
         brand = data.get('brand')
         name = data.get('name')

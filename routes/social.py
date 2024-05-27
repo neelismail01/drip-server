@@ -4,7 +4,7 @@ from flask import (
     jsonify,
     request
 )
-from bson import json_util
+from bson import json_util, ObjectId
 
 social_blueprint = Blueprint('social', __name__)
 
@@ -44,3 +44,58 @@ def check_following_relationship():
             "followee_id": followee_id
         })
         return json_util.dumps(relationship), 200
+    
+@social_blueprint.route('/stats/<user_id>', methods=["GET"])
+def get_follower_following_stats(user_id):
+    db = current_app.mongo.drip
+    if request.method == "GET":
+        # Ensure user_id is a valid ObjectId
+        try:
+            user_object_id = ObjectId(user_id)
+        except Exception as e:
+            return jsonify({"error": "Invalid user ID"}), 400
+
+        # Query to find users this user follows
+        following = db.social_graph.find({
+            "follower_id": str(user_object_id),
+            "status": "SUCCESSFUL"
+        })
+
+        # Query to find users who follow this user
+        followers = db.social_graph.find({
+            "followee_id": str(user_object_id),
+            "status": "SUCCESSFUL"
+        })
+
+        # Convert following and followers to lists of user objects
+        following_list = []
+        followers_list = []
+
+        for follow in following:
+            followee_id = follow.get("followee_id")
+            following_list.append({
+                "id": followee_id,
+                "name": follow.get("followee_name"),
+                "username": follow.get("followee_username"),
+                "is_following": True
+            })
+
+        for follow in followers:
+            follower_id = follow.get("follower_id")
+            is_following = db.social_graph.find_one({
+                "follower_id": str(user_object_id),
+                "followee_id": follower_id,
+                "status": "SUCCESSFUL"
+            }) is not None
+
+            followers_list.append({
+                "id": follower_id,
+                "name": follow.get("follower_name"),
+                "username": follow.get("follower_username"),
+                "is_following": is_following
+            })
+
+        return jsonify({
+            "following": following_list,
+            "followers": followers_list
+        }), 200
