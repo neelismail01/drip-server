@@ -1,7 +1,7 @@
 __pycache__
 *.py[cod]
 *$py.class
-flask_session
+flask_session/
 
 # Distribution / packaging 
 .Python build/ 
