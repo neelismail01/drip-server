@@ -229,10 +229,7 @@ def closet():
         })
         return "Successfully added item to the items and closet database", 200
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
-        
+        user_id = request.args.get('user_id')
         closet_documents = closet_collection.find({'user_id': ObjectId(user_id)})
         closet_items = []
 

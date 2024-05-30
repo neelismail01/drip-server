@@ -93,8 +93,11 @@ def outfits():
         })
         return "Successfully added items to the database", 200
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
+        user_id = request.args.get('user_id')
+        user = users_collection.find_one({'_id': ObjectId(user_id)})
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+        
         pipeline = [
             {
                 '$match': {'user_id': user['_id']}
@@ -332,10 +335,7 @@ def closet():
             })
         return "Successfully added items to the database", 200
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
-        
+        user_id = request.args.get('user_id')
         closet_documents = closet_collection.find({'user_id': ObjectId(user_id)})
         closet_items = []
 
@@ -466,9 +466,7 @@ def liked_items():
         else:
             return "Item is already in liked items", 400
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
+        user_id = request.args.get('user_id')
         liked_items = liked_items_collection.find({'user_id': ObjectId(user_id)})
         item_ids = [item['item_id'] for item in liked_items]
         if (item_ids):
@@ -510,9 +508,7 @@ def liked_outfits():
         else:
             return "Item is already in liked outfits", 400
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
+        user_id = request.args.get('user_id')
         liked_outfits = liked_outfits_collection.find({'user_id': ObjectId(user_id)})
         outfit_ids = [outfit['outfit_id'] for outfit in liked_outfits]
         if (outfit_ids):
