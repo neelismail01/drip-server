@@ -33,6 +33,25 @@ def follow_user():
 
         return "Successfully sent follow request", 200
 
+@social_blueprint.route('/unfollow', methods=["POST"])
+def unfollow_user():
+    db = current_app.mongo.drip
+    data = request.json
+    if request.method == "POST":
+        follower_id = data.get("follower_id")
+        followee_id = data.get("followee_id")
+
+        result = db.social_graph.delete_one({
+            "follower_id": follower_id,
+            "followee_id": followee_id
+        })
+
+        if result.deleted_count > 0:
+            return "Successfully unfollowed user", 200
+        else:
+            return "Failed to unfollow user or follow relationship does not exist", 400
+
+
 @social_blueprint.route('/', methods=["GET"])
 def check_following_relationship():
     db = current_app.mongo.drip
