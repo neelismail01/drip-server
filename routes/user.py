@@ -163,6 +163,18 @@ def profile_picture():
         else:
             return 'User not found', 404
 
+@user_blueprint.route('/<user_id>', methods=["GET"])
+def get_user(user_id):
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    
+    if user:
+        user['_id'] = str(user['_id'])
+        return jsonify(user), 200
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
 @user_blueprint.route('/closet', methods=["GET", "POST", "DELETE"])
 def closet():
     db = current_app.mongo.drip
@@ -229,10 +241,7 @@ def closet():
         })
         return "Successfully added item to the items and closet database", 200
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
-        
+        user_id = request.args.get('user_id')
         closet_documents = closet_collection.find({'user_id': ObjectId(user_id)})
         closet_items = []
 

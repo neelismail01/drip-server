@@ -33,6 +33,25 @@ def follow_user():
 
         return "Successfully sent follow request", 200
 
+@social_blueprint.route('/unfollow', methods=["POST"])
+def unfollow_user():
+    db = current_app.mongo.drip
+    data = request.json
+    if request.method == "POST":
+        follower_id = data.get("follower_id")
+        followee_id = data.get("followee_id")
+
+        result = db.social_graph.delete_one({
+            "follower_id": follower_id,
+            "followee_id": followee_id
+        })
+
+        if result.deleted_count > 0:
+            return "Successfully unfollowed user", 200
+        else:
+            return "Failed to unfollow user or follow relationship does not exist", 400
+
+
 @social_blueprint.route('/', methods=["GET"])
 def check_following_relationship():
     db = current_app.mongo.drip
@@ -97,5 +116,44 @@ def get_follower_following_stats(user_id):
 
         return jsonify({
             "following": following_list,
+            "followers": followers_list
+        }), 200
+
+@social_blueprint.route('/friend-followers/<friend_id>/<user_id>', methods=["GET"])
+def get_friend_followers(friend_id, user_id):
+    db = current_app.mongo.drip
+    if request.method == "GET":
+        # Ensure user_id and friend_id are valid ObjectIds
+        try:
+            friend_object_id = ObjectId(friend_id)
+            user_object_id = ObjectId(user_id)
+        except Exception as e:
+            return jsonify({"error": "Invalid user ID"}), 400
+
+        # Query to find users who follow the friend
+        followers = db.social_graph.find({
+            "followee_id": str(friend_object_id),
+            "status": "SUCCESSFUL"
+        })
+
+        # Convert followers to list of user objects
+        followers_list = []
+        for follow in followers:
+            follower_id = follow.get("follower_id")
+            # Check if the current user follows this follower
+            is_following = db.social_graph.find_one({
+                "follower_id": str(user_object_id),
+                "followee_id": follower_id,
+                "status": "SUCCESSFUL"
+            }) is not None
+
+            followers_list.append({
+                "id": follower_id,
+                "name": follow.get("follower_name"),
+                "username": follow.get("follower_username"),
+                "is_following": is_following
+            })
+
+        return jsonify({
             "followers": followers_list
         }), 200

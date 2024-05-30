@@ -71,8 +71,11 @@ def outfits():
         })
         return "Successfully added items to the database", 200
     elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
+        user_id = request.args.get('user_id')
+        user = users_collection.find_one({'_id': ObjectId(user_id)})
+        if user is None:
+            return jsonify({"error": "User not found"}), 404
+        
         pipeline = [
             {
                 '$match': {'user_id': user['_id']}
