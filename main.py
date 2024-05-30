@@ -20,7 +20,7 @@ from routes.outfits import outfits_blueprint
 from routes.search import search_blueprint
 from routes.user import user_blueprint
 from routes.social import social_blueprint
-from routes.assistant import assistant_blueprint
+# from routes.assistant import assistant_blueprint
 
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
@@ -45,7 +45,7 @@ app.register_blueprint(outfits_blueprint, url_prefix="/outfits")
 app.register_blueprint(search_blueprint)
 app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
-app.register_blueprint(assistant_blueprint, url_prefix="/assistant")
+# app.register_blueprint(assistant_blueprint, url_prefix="/assistant")
 
 @app.route('/profile', methods=["PUT"])
 def profile():
