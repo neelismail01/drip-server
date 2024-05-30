@@ -17,7 +17,6 @@ client = Groq(
 def chat():
     data = request.json
     chatHistory = data.get("chatHistory")
-    print(chatHistory)
     messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, chatHistory))
     chat_completion = client.chat.completions.create(
         messages=messages,
@@ -27,5 +26,4 @@ def chat():
         top_p=1
     )
 
-    print(chat_completion.choices[0].message.content)
     return chat_completion.choices[0].message.content, 200
