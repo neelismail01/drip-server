@@ -13,10 +13,11 @@ client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
 
-@assistant_blueprint.route('/chat', methods=["GET"])
+@assistant_blueprint.route('/chat', methods=["POST"])
 def chat():
     data = request.json
-    messages = data.get("messages")
+    chatHistory = data.get("chatHistory")
+    messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, chatHistory))
     chat_completion = client.chat.completions.create(
         messages=messages,
         model="llama3-8b-8192",
@@ -25,5 +26,4 @@ def chat():
         top_p=1
     )
 
-    print(chat_completion)
     return chat_completion.choices[0].message.content, 200
