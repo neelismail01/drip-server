@@ -8,12 +8,15 @@ import os
 import datetime
 from bson import ObjectId
 from groq import Groq
+from openai import OpenAI
 
 assistant_blueprint = Blueprint('assistant', __name__)
 
-client = Groq(
+groq_client = Groq(
     api_key=os.environ.get("GROQ_API_KEY"),
 )
+openai_client = OpenAI()
+
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["GET"])
 def get_chat(chat_id):
@@ -65,7 +68,7 @@ def evaluate_chat_request_for_misuse(message):
         }
     ]
 
-    chat_completion = client.chat.completions.create(
+    chat_completion = groq_client.chat.completions.create(
         messages=chat_preamble,
         model="llama3-8b-8192",
         temperature=0,
@@ -83,8 +86,9 @@ def get_chat_response(chat_history):
     if misuse:
         return "As a fashion assistant, I cannot answer this question."
 
-    messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, chat_history))
-    chat_completion = client.chat.completions.create(
+    text_messages = list(filter(lambda item: item["content_type"] == "text", chat_history))
+    messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, text_messages))
+    chat_completion = groq_client.chat.completions.create(
         messages=messages,
         model="llama3-8b-8192",
         temperature=1,
@@ -110,11 +114,12 @@ def create_chat(user_id):
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
-        "content": chat_response
+        "content": chat_response,
+        "content_type": "text"
     })
 
     current_time = datetime.datetime.utcnow()
-    title = chat_history[2]["content"] if len(chat_history[2]["content"]) < 100 else chat_history[2]["content"][:100] + "..."
+    title = chat_history[2]["content"] if len(chat_history[2]["content"]) < 50 else chat_history[2]["content"][:50] + "..."
     result = db.assistant_chats.insert_one({
         "user_id": user_object_id,
         "messages": chat_history,
@@ -141,7 +146,8 @@ def update_chat(chat_id):
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
-        "content": chat_response
+        "content": chat_response,
+        "content_type": "text"
     })
     new_messages = chat_history[-2:]
 
@@ -161,3 +167,54 @@ def update_chat(chat_id):
     )
 
     return { "chat_response": chat_response }, 200
+
+@assistant_blueprint.route('/image/<chat_id>', methods=["POST"])
+def create_outfit_image(chat_id):
+    try:
+        chat_object_id = ObjectId(chat_id)
+    except Exception as e:
+        return jsonify({"error": "Invalid chat ID"}), 400
+
+    prompt_preamble = """Create a picture that only consists of a single mannequin wearing all 
+    items in the outfit described below. The background should be a chic hardwood floored 
+    fitting room. The whole body of the mannequin should be shown. """
+
+    db = current_app.mongo.drip
+    data = request.json
+    prompt = data.get("prompt")
+    chat_history = data.get("chatHistory")
+
+    full_prompt = prompt_preamble + prompt
+    try:
+        response = openai_client.images.generate(
+            prompt=full_prompt,
+            model="dall-e-3",
+            n=1,
+            size="1024x1024",
+            style="vivid"
+        ) 
+        image_url = response.data[0].url
+
+        new_message = {
+            "id": str(len(chat_history) + 1),
+            "role": "assistant",
+            "content": image_url,
+            "content_type": "image"
+        }
+        current_time = datetime.datetime.utcnow()
+        db.assistant_chats.update_one(
+            { "_id": chat_object_id },
+            {
+                "$push": {
+                    "messages": new_message
+                },
+                "$set": {
+                    "date_updated": current_time
+                }
+            }
+        )
+
+        return jsonify({"image_url": image_url}), 200
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return jsonify({"error": str(e)}), 400
