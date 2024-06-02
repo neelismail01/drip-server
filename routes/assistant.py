@@ -80,7 +80,42 @@ def evaluate_chat_request_for_misuse(message):
     misuse = True if response_content == "no" else False
     return misuse
 
-def get_chat_response(chat_history):
+def classify_user_message_intent(query):
+    prompt_text = (
+        """
+        You’re a LLM that detects intent from user queries. Your task is to classify the user's intent based on their query. Below are 4 possible intents with brief descriptions. Use these to accurately determine the user's goal. Please only output the intent topic.
+
+        - Advice For Occasion: Inquiries about what to wear for a specific occasion. An example of this kind of query would be "What should I wear for a job interview at law firm?".
+
+        - Build Around Item: Inquiries about how to build an outfit using one or multiple items defined in the query. An example of this kind of query would be "I have a white linen shirt. Can you recommend an outfit I can build around this clothing item?".
+
+        - Other: Choose this if the query doesn’t fall into any of the other intents.
+        """
+    )
+
+    chat_preamble = [
+        {
+            "role": "system",
+            "content" : prompt_text
+        },
+        {
+            "role": "user",
+            "content": query
+        }
+    ]
+
+    chat_completion = groq_client.chat.completions.create(
+        messages=chat_preamble,
+        model="llama3-8b-8192",
+        temperature=0,
+        max_tokens=128,
+        top_p=1
+    )
+    user_intent = chat_completion.choices[0].message.content
+    print("user intent: \t" + user_intent)
+    return user_intent
+
+def get_chat_response_and_user_intent(chat_history):
     most_recent_message = chat_history[-1]["content"]
     misuse = evaluate_chat_request_for_misuse(most_recent_message)
     if misuse:
@@ -88,8 +123,31 @@ def get_chat_response(chat_history):
 
     text_messages = list(filter(lambda item: item["content_type"] == "text", chat_history))
     messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, text_messages))
+
+    user_intent = classify_user_message_intent(most_recent_message)
+    messages_with_prompting = messages
+    match user_intent:
+        case "Advice For Occasion":
+            messages_with_prompting[-1]["content"] = (
+                """
+                You are providing advice for what someone should wear to an occasion described below.
+                Please provide a single outfit recommendation. Please format the output with bullets describing 
+                what the top, bottoms, shoes, and accessories should look like, respectively.\n
+                """
+            ) + most_recent_message
+        case "Build Around Item":
+            messages_with_prompting[-1]["content"] = (
+                """
+                You are providing advice for an outfit someone could wear using the fashion item provided below.
+                Please provide a single outfit recommendation. Please format the output with bullets describing 
+                what the top, bottoms, shoes, and accessories should look like, respectively.\n
+                """
+            ) + most_recent_message
+        case "Other":
+            pass
+
     chat_completion = groq_client.chat.completions.create(
-        messages=messages,
+        messages=messages_with_prompting,
         model="llama3-8b-8192",
         temperature=1,
         max_tokens=512,
@@ -97,7 +155,7 @@ def get_chat_response(chat_history):
     )
 
     chat_response = chat_completion.choices[0].message.content
-    return chat_response
+    return (chat_response, user_intent)
 
 @assistant_blueprint.route('/chat/<user_id>', methods=["POST"])
 def create_chat(user_id):
@@ -110,7 +168,7 @@ def create_chat(user_id):
     data = request.json
     chat_history = data.get("chatHistory")
 
-    chat_response = get_chat_response(chat_history)
+    (chat_response, user_intent) = get_chat_response_and_user_intent(chat_history)
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
@@ -129,7 +187,7 @@ def create_chat(user_id):
     })
 
     document_id = str(result.inserted_id)
-    return { "chat_response": chat_response, "chat_id": document_id }, 200
+    return { "chat_response": chat_response, "chat_id": document_id, "user_intent": user_intent }, 200
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["PUT"])
 def update_chat(chat_id):
@@ -142,7 +200,7 @@ def update_chat(chat_id):
     data = request.json
     chat_history = data.get("chatHistory")
 
-    chat_response = get_chat_response(chat_history)
+    (chat_response, user_intent) = get_chat_response_and_user_intent(chat_history)
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
@@ -166,7 +224,7 @@ def update_chat(chat_id):
         }
     )
 
-    return { "chat_response": chat_response }, 200
+    return { "chat_response": chat_response, "user_intent": user_intent }, 200
 
 @assistant_blueprint.route('/image/<chat_id>', methods=["POST"])
 def create_outfit_image(chat_id):
@@ -175,9 +233,16 @@ def create_outfit_image(chat_id):
     except Exception as e:
         return jsonify({"error": "Invalid chat ID"}), 400
 
-    prompt_preamble = """Create a picture that only consists of a single mannequin wearing all 
-    items in the outfit described below. The background should be a chic hardwood floored 
-    fitting room. The whole body of the mannequin should be shown. """
+    prompt_preamble = (
+        """
+        You will be given a description of an outfit. Please create a picture that consists of a 
+        single mannequin wearing all items in the described outfit. The background should be a chic 
+        hardwood floored fitting room. The whole body of the mannequin should be shown. If multiple 
+        colours are proposed for a particular clothing item, use the first colour in your depiction.
+
+        Outfit description: \n\n
+        """
+    )
 
     db = current_app.mongo.drip
     data = request.json
