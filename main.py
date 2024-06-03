@@ -39,7 +39,7 @@ client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["drip"]
 
 # Register the blueprint with the app
-app.register_blueprint(brands_blueprint)
+app.register_blueprint(brands_blueprint, url_prefix="/brands")
 app.register_blueprint(items_blueprint)
 app.register_blueprint(outfits_blueprint, url_prefix="/outfits")
 app.register_blueprint(search_blueprint)

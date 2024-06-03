@@ -163,14 +163,30 @@ def profile_picture():
         else:
             return 'User not found', 404
 
-@user_blueprint.route('/<user_id>', methods=["GET"])
-def get_user(user_id):
+@user_blueprint.route('/profile_pic/<user_id>', methods=["GET"])
+def get_user_profile_pic(user_id):
     db = current_app.mongo.drip
     users_collection = db['users']
     user = users_collection.find_one({'_id': ObjectId(user_id)})
     
     if user:
-        user['_id'] = str(user['_id'])
+        profile_pic = user['profile_pic']
+        return jsonify({
+                "profile_pic": profile_pic,
+            }), 200
+    else:
+        return jsonify({'error': 'User not found'}), 404
+
+@user_blueprint.route('/<user_id>', methods=["GET"])
+def get_user(user_id):
+    print("HEREEE")
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    user = users_collection.find_one({'_id': ObjectId(user_id)})
+    
+    if user:
+        user["_id"] = str(user['_id'])
+        print(user)
         return jsonify(user), 200
     else:
         return jsonify({'error': 'User not found'}), 404
@@ -217,7 +233,7 @@ def closet():
         if existing_brand:
             brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
         else:
-            new_brand = {'brand_name': brand, 'purchasedCount': 1, 'logo': ""}
+            new_brand = {'brand_name': brand, 'purchasedCount': 1, 'logo': "", 'followers': []}
             brands_collection.insert_one(new_brand)
 
         # add item to item collection
@@ -255,7 +271,8 @@ def closet():
                     'closet_id': str(closet_doc['_id']),
                     'item': item_doc,
                     'caption': closet_doc['caption'],
-                    'images': closet_doc['images']
+                    'images': closet_doc['images'],
+                    'user_id': str(closet_doc['user_id'])
                 }
                 closet_items.append(closet_item)
 
