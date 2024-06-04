@@ -207,6 +207,7 @@ def closet():
         gender = user['preference']
 
         brand = data.get('brand')
+        color = data.get('color')
         name = data.get('name')
         caption = data.get('caption')
         pictures = data.get('pictures')
@@ -239,6 +240,7 @@ def closet():
         # add item to item collection
         item = {
             "brand": brand,
+            "color": color,
             "item_name": name,
             "images": media_urls,
             "tags": tags,
@@ -462,3 +464,16 @@ def liked_outfits():
         user_id = user['_id']
         liked_outfits_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
         return "Successfully deleted item from liked outfits", 200
+
+@user_blueprint.route('/liked_count/<user_id>', methods=["GET"])
+def liked_count(user_id):
+    db = current_app.mongo.drip
+    liked_items_collection = db['liked_items']
+    liked_outfits_collection = db['liked_outfits']
+
+    user_object_id = ObjectId(user_id)
+    liked_items_count = liked_items_collection.count_documents({'user_id': user_object_id})
+    liked_outfits_count = liked_outfits_collection.count_documents({'user_id': user_object_id})
+    total_liked_count = liked_items_count + liked_outfits_count
+
+    return jsonify({'total_liked_count': total_liked_count}), 200
