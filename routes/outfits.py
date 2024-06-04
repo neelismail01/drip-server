@@ -36,6 +36,7 @@ def outfits():
         email = data.get('email')
         items = data.get('items')
         tags = data.get('tags')
+        name = data.get('name')
         caption = data.get('caption')
         pictures = data.get('pictures')
 
@@ -65,6 +66,7 @@ def outfits():
         outfits_collection.insert_one({
             'user_id': user['_id'],
             'items': item_ids,
+            'name': name,
             'caption': caption,
             'tags': tags,
             'images': media_urls
