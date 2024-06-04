@@ -1,3 +1,4 @@
+import json
 from flask import (
     current_app,
     Blueprint,
@@ -7,8 +8,10 @@ from flask import (
 import os
 import datetime
 from bson import ObjectId
+from bson.json_util import dumps
 from groq import Groq
 from openai import OpenAI
+from functools import reduce
 
 assistant_blueprint = Blueprint('assistant', __name__)
 
@@ -112,7 +115,6 @@ def classify_user_message_intent(query):
         top_p=1
     )
     user_intent = chat_completion.choices[0].message.content
-    print("user intent: \t" + user_intent)
     return user_intent
 
 def get_chat_response_and_user_intent(chat_history):
@@ -283,3 +285,119 @@ def create_outfit_image(chat_id):
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({"error": str(e)}), 400
+
+def extract_items_from_text(outfit_description):
+    prompt_text = (
+        """
+        You’re a LLM that identifies fashion items (along with corresponding colors and fabrics if any are 
+        specified) from an outfit description. Your task is to extract all items from a described outfit and 
+        output the identified fashion items organized by tops, bottoms, shoes, and accessories. Please exclude
+        any descriptive words associated with an item that are not related to color. Produce an output
+        in the following JSON format:
+
+        {
+            'tops': [
+                {
+                    'item': '',
+                    'colors': [],
+                    'fabrics': []
+                }
+            ],
+            'bottoms': [
+                {
+                    'item': '',
+                    'colors': [],
+                    'fabrics': []
+                }
+            ],
+            'shoes': [
+                {
+                    'item': '',
+                    'colors': [],
+                    'fabrics': []
+                }
+            ],
+            'accessories': [
+                {
+                    'item': '',
+                    'colors': [],
+                    'fabrics': []
+                }
+            ]
+        }
+
+        Only include the JSON in the output.
+        """
+    )
+
+    chat_preamble = [
+        {
+            "role": "system",
+            "content" : prompt_text
+        },
+        {
+            "role": "user",
+            "content": outfit_description
+        }
+    ]
+
+    chat_completion = groq_client.chat.completions.create(
+        messages=chat_preamble,
+        model="llama3-8b-8192",
+        temperature=0,
+        max_tokens=512,
+        top_p=1
+    )
+    
+    extracted_items = chat_completion.choices[0].message.content
+    return json.loads(extracted_items)
+
+@assistant_blueprint.route('/chats/search', methods=["POST"])
+def search_items():
+    db = current_app.mongo.drip
+    data = request.json
+    outfit_description = data.get("outfit_description")
+    extracted_items = extract_items_from_text(outfit_description)
+
+    def create_list_of_items(extracted_item_data):
+        items = reduce(
+            lambda acc, top: acc + [color + " " + top["item"] for color in top["colors"]],
+            extracted_item_data,
+            []
+        )
+        return [item.split() for item in items]
+
+    tops_keywords = create_list_of_items(extracted_items["tops"])
+    bottoms_keywords = create_list_of_items(extracted_items["bottoms"])
+    shoes_keywords = create_list_of_items(extracted_items["shoes"])
+    accessories_keywords = create_list_of_items(extracted_items["accessories"])
+
+    def create_filter_query(category_keywords):
+        return [{
+            '$match': {
+                '$or': [
+                    {
+                        '$and': [
+                            {'item_name': {'$regex': keyword, '$options': 'i'}}
+                            for keyword in keywords
+                        ]
+                    }
+                    for keywords in category_keywords
+                ]
+            }
+        }]
+
+    pipeline = [
+        {
+            '$facet': {
+                'tops': create_filter_query(tops_keywords),
+                'bottoms': create_filter_query(bottoms_keywords),
+                'shoes': create_filter_query(shoes_keywords),
+                'accessories': create_filter_query(accessories_keywords),
+            }
+        }
+    ]
+
+    result = list(db.items.aggregate(pipeline))
+    result_json = dumps(result)
+    return result_json, 200
