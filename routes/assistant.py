@@ -1,4 +1,5 @@
 import json
+import pprint
 from flask import (
     current_app,
     Blueprint,
@@ -7,11 +8,9 @@ from flask import (
 )
 import os
 import datetime
-from bson import ObjectId
-from bson.json_util import dumps
+from bson import ObjectId, json_util
 from groq import Groq
 from openai import OpenAI
-from functools import reduce
 
 assistant_blueprint = Blueprint('assistant', __name__)
 
@@ -20,6 +19,11 @@ groq_client = Groq(
 )
 openai_client = OpenAI()
 
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        return super().default(o)
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["GET"])
 def get_chat(chat_id):
@@ -34,10 +38,11 @@ def get_chat(chat_id):
     # Find all documents matching the user_id
     chats = list(db.assistant_chats.find({'_id': chat_object_id}))
 
-    if len(chats) > 0:
-        return jsonify({'messages': chats[0]['messages']}), 200
+    if len(chats) == 0:
+        return jsonify({"error": "Chat ID does not exist"}), 400
     
-    return jsonify({"error": "Chat ID does not exist"}), 400
+    return json.loads(json_util.dumps({'messages': chats[0]['messages']})), 200
+    
 
 @assistant_blueprint.route('/chats/<user_id>', methods=["GET"])
 def get_all_chats(user_id):
@@ -56,14 +61,18 @@ def get_all_chats(user_id):
     for chat in chats:
         chat['_id'] = str(chat['_id'])
         chat['user_id'] = str(chat['user_id'])
-
-    return jsonify({'chats': chats}), 200
+    return json.loads(json_util.dumps({'chats': chats})), 200
 
 def evaluate_chat_request_for_misuse(message):
     chat_preamble = [
         {
             "role": "system",
-            "content" : "you are an assistant evaluating whether the topic of a provided message is related to fashion. is the following message related to fashion? answer yes or no."
+            "content" : (
+                """
+                you are an assistant evaluating whether the topic of a provided message is related to fashion. 
+                is the following message related to fashion? answer yes or no.
+                """
+            )
         },
         {
             "role": "user",
@@ -117,16 +126,15 @@ def classify_user_message_intent(query):
     user_intent = chat_completion.choices[0].message.content
     return user_intent
 
-def get_chat_response_and_user_intent(chat_history):
-    most_recent_message = chat_history[-1]["content"]
+def get_chat_response(chat_history):
+    most_recent_message = chat_history[-1]["text"]
     misuse = evaluate_chat_request_for_misuse(most_recent_message)
     if misuse:
         return "As a fashion assistant, I cannot answer this question."
 
-    text_messages = list(filter(lambda item: item["content_type"] == "text", chat_history))
-    messages = list(map(lambda item: { "role": item['role'], "content": item['content'] }, text_messages))
-
     user_intent = classify_user_message_intent(most_recent_message)
+    text_messages = list(filter(lambda item: item["content_type"] == "text", chat_history))
+    messages = list(map(lambda item: { "role": item["role"], "content": item["text"] }, text_messages))
     messages_with_prompting = messages
     match user_intent:
         case "Advice For Occasion":
@@ -134,15 +142,8 @@ def get_chat_response_and_user_intent(chat_history):
                 """
                 You are providing advice for what someone should wear to an occasion described below.
                 Please provide a single outfit recommendation. Please format the output with bullets describing 
-                what the top, bottoms, shoes, and accessories should look like, respectively.\n
-                """
-            ) + most_recent_message
-        case "Build Around Item":
-            messages_with_prompting[-1]["content"] = (
-                """
-                You are providing advice for an outfit someone could wear using the fashion item provided below.
-                Please provide a single outfit recommendation. Please format the output with bullets describing 
-                what the top, bottoms, shoes, and accessories should look like, respectively.\n
+                what the top, bottoms, shoes, and accessories should look like, respectively. Describe the outfit
+                as simply as possible. \n
                 """
             ) + most_recent_message
         case "Other":
@@ -157,7 +158,7 @@ def get_chat_response_and_user_intent(chat_history):
     )
 
     chat_response = chat_completion.choices[0].message.content
-    return (chat_response, user_intent)
+    return chat_response
 
 @assistant_blueprint.route('/chat/<user_id>', methods=["POST"])
 def create_chat(user_id):
@@ -170,16 +171,20 @@ def create_chat(user_id):
     data = request.json
     chat_history = data.get("chatHistory")
 
-    (chat_response, user_intent) = get_chat_response_and_user_intent(chat_history)
+    chat_response = get_chat_response(chat_history)
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
-        "content": chat_response,
+        "text": chat_response,
         "content_type": "text"
     })
 
     current_time = datetime.datetime.utcnow()
-    title = chat_history[2]["content"] if len(chat_history[2]["content"]) < 50 else chat_history[2]["content"][:50] + "..."
+    title = (
+        chat_history[2]["text"] 
+        if len(chat_history[2]["text"]) < 50 
+        else chat_history[2]["text"][:50] + "..."
+    )
     result = db.assistant_chats.insert_one({
         "user_id": user_object_id,
         "messages": chat_history,
@@ -189,7 +194,11 @@ def create_chat(user_id):
     })
 
     document_id = str(result.inserted_id)
-    return { "chat_response": chat_response, "chat_id": document_id, "user_intent": user_intent }, 200
+
+    return (json.loads(json_util.dumps({ 
+        "chat_response": chat_response, 
+        "chat_id": document_id, 
+    })), 200)
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["PUT"])
 def update_chat(chat_id):
@@ -202,15 +211,15 @@ def update_chat(chat_id):
     data = request.json
     chat_history = data.get("chatHistory")
 
-    (chat_response, user_intent) = get_chat_response_and_user_intent(chat_history)
+    chat_response = get_chat_response(chat_history)
     chat_history.append({
         "id": str(len(chat_history) + 1),
         "role": "assistant",
-        "content": chat_response,
+        "text": chat_response,
         "content_type": "text"
     })
-    new_messages = chat_history[-2:]
 
+    new_messages = chat_history[-2:]
     current_time = datetime.datetime.utcnow()
     db.assistant_chats.update_one(
         { "_id": chat_object_id },
@@ -226,7 +235,7 @@ def update_chat(chat_id):
         }
     )
 
-    return { "chat_response": chat_response, "user_intent": user_intent }, 200
+    return (json.loads(json_util.dumps({"chat_response": chat_response })), 200)
 
 @assistant_blueprint.route('/image/<chat_id>', methods=["POST"])
 def create_outfit_image(chat_id):
@@ -250,7 +259,6 @@ def create_outfit_image(chat_id):
     data = request.json
     prompt = data.get("prompt")
     chat_history = data.get("chatHistory")
-
     full_prompt = prompt_preamble + prompt
     try:
         response = openai_client.images.generate(
@@ -265,7 +273,7 @@ def create_outfit_image(chat_id):
         new_message = {
             "id": str(len(chat_history) + 1),
             "role": "assistant",
-            "content": image_url,
+            "image": image_url,
             "content_type": "image"
         }
         current_time = datetime.datetime.utcnow()
@@ -281,59 +289,41 @@ def create_outfit_image(chat_id):
             }
         )
 
-        return jsonify({"image_url": image_url}), 200
+        return (json.loads(json_util.dumps({"image_url": image_url})), 200)
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({"error": str(e)}), 400
 
-def extract_items_from_text(outfit_description):
+def extract_items_from_outfit_description(outfit_description):
     prompt_text = (
         """
-        You’re a LLM that identifies fashion items (along with corresponding colors and fabrics if any are 
-        specified) from an outfit description. Your task is to extract all items from a described outfit and 
-        output the identified fashion items organized by tops, bottoms, shoes, and accessories. Please exclude
-        any descriptive words associated with an item that are not related to color. Produce an output
-        in the following JSON format:
+        You are an LLM that analyzes an outfit description and identifies fashion items along with their 
+        corresponding colors. Your task is to extract all individual items in the described 
+        outfit organized by tops, bottoms, shoes, and accessories. If an item is described with multiple
+        possible colors, produce separate entries in the output. Disregard any descriptive words that aren't 
+        related to the name of the fashion item or its color. Here is an example of an input and output for 
+        this task. Only produce the JSON in the output.
 
+        Input:
+        - Top: Light blue dress shirt with a slim collar and comfortable fit.
+        - Bottoms: Dark gray or black slim-fit trousers or chinos for a sharp, yet relaxed look.
+        - Shoes: Black or brown leather dress shoes, polished to perfection.
+        - Accessories: Simple leather belt, slim watch, and a simple silver or leather cufflink.
+
+        Output:
         {
-            'tops': [
-                {
-                    'item': '',
-                    'colors': [],
-                    'fabrics': []
-                }
-            ],
-            'bottoms': [
-                {
-                    'item': '',
-                    'colors': [],
-                    'fabrics': []
-                }
-            ],
-            'shoes': [
-                {
-                    'item': '',
-                    'colors': [],
-                    'fabrics': []
-                }
-            ],
-            'accessories': [
-                {
-                    'item': '',
-                    'colors': [],
-                    'fabrics': []
-                }
-            ]
+            "tops": ["white sweater", "light blue sweater", "blush-colored dress shirt"],
+            "bottoms": ["dark-washed jeans", "dark gray jeans", "dark gray chinos"],
+            "shoes": ["black leather shoes", "loafers"]
+            "accessories": ["leather belt", "slim watch", "silver cufflink", "leather cufflink"]
         }
-
-        Only include the JSON in the output.
         """
     )
 
     chat_preamble = [
         {
             "role": "system",
-            "content" : prompt_text
+            "content": prompt_text
         },
         {
             "role": "user",
@@ -348,56 +338,74 @@ def extract_items_from_text(outfit_description):
         max_tokens=512,
         top_p=1
     )
-    
+
     extracted_items = chat_completion.choices[0].message.content
     return json.loads(extracted_items)
 
-@assistant_blueprint.route('/chats/search', methods=["POST"])
-def search_items():
+@assistant_blueprint.route('/search/<chat_id>', methods=["POST"])
+def search_items(chat_id):
+    try:
+        chat_object_id = ObjectId(chat_id)
+    except Exception:
+        return jsonify({"error": "Invalid chat ID"}), 400
+
     db = current_app.mongo.drip
     data = request.json
-    outfit_description = data.get("outfit_description")
-    extracted_items = extract_items_from_text(outfit_description)
+    outfit_description = data.get("outfitDescription")
+    chat_history = data.get("chatHistory")
 
-    def create_list_of_items(extracted_item_data):
-        items = reduce(
-            lambda acc, top: acc + [color + " " + top["item"] for color in top["colors"]],
-            extracted_item_data,
-            []
-        )
-        return [item.split() for item in items]
-
-    tops_keywords = create_list_of_items(extracted_items["tops"])
-    bottoms_keywords = create_list_of_items(extracted_items["bottoms"])
-    shoes_keywords = create_list_of_items(extracted_items["shoes"])
-    accessories_keywords = create_list_of_items(extracted_items["accessories"])
-
-    def create_filter_query(category_keywords):
+    def create_filter_query(clothing_items):
         return [{
             '$match': {
                 '$or': [
                     {
                         '$and': [
-                            {'item_name': {'$regex': keyword, '$options': 'i'}}
-                            for keyword in keywords
+                            {'item_name': {'$regex': detail, '$options': 'i'}}
+                            for detail in clothing_item.split(" ")
                         ]
                     }
-                    for keywords in category_keywords
+                    for clothing_item in clothing_items
                 ]
             }
         }]
 
+    extracted_items = extract_items_from_outfit_description(outfit_description)
     pipeline = [
         {
             '$facet': {
-                'tops': create_filter_query(tops_keywords),
-                'bottoms': create_filter_query(bottoms_keywords),
-                'shoes': create_filter_query(shoes_keywords),
-                'accessories': create_filter_query(accessories_keywords),
+                'tops': create_filter_query(extracted_items["tops"]),
+                'bottoms': create_filter_query(extracted_items["bottoms"]),
+                'shoes': create_filter_query(extracted_items["shoes"]),
+                'accessories': create_filter_query(extracted_items["accessories"]),
             }
         }
     ]
 
     result = list(db.items.aggregate(pipeline))
-    result_json = dumps(result)
-    return result_json, 200
+    
+    # Ensure result_json is a dictionary
+    result_json = result[0]
+
+    new_message = {
+        "id": str(len(chat_history) + 1),
+        "role": "assistant",
+        "relevant_items": result_json,
+        "content_type": "relevant_items"
+    }
+    current_time = datetime.datetime.utcnow()
+    db.assistant_chats.update_one(
+        { "_id": chat_object_id },
+        {
+            "$push": {
+                "messages": new_message
+            },
+            "$set": {
+                "date_updated": current_time
+            }
+        }
+    )
+
+    serialized_result = json.loads(json_util.dumps({"relevant_items": result_json}))
+
+    # Ensure that jsonify is correctly used
+    return serialized_result, 200
