@@ -39,7 +39,7 @@ db = client["drip"]
 
 # Register the blueprint with the app
 app.register_blueprint(brands_blueprint, url_prefix="/brands")
-app.register_blueprint(items_blueprint)
+app.register_blueprint(items_blueprint, url_prefix="/items")
 app.register_blueprint(outfits_blueprint, url_prefix="/outfits")
 app.register_blueprint(search_blueprint, url_prefix="/search")
 app.register_blueprint(social_blueprint, url_prefix='/social')
@@ -186,63 +186,6 @@ def outfit_wishlist():
         user_id = user['_id']
         outfit_wishlist_collection.delete_one({'user_id': user_id, 'outfit_id': outfit_id})
         return "Successfully deleted item from wish list", 200
-
-@app.route('/liked_items', methods=["GET", "POST", "DELETE"])
-def liked_items():
-    closet_collection = db['collection']
-    users_collection = db['users']
-    items_collection = db['items']
-    liked_items_collection = db['liked_items']
-
-    if request.method == "POST":
-        data = request.json
-        email = data.get('email')
-        item = data.get('item')
-        user = users_collection.find_one({'email': email})
-        item_id = ObjectId(item['_id'])
-        if not liked_items_collection.find_one({'user_id': user['_id'], 'item_id': item_id}):
-            liked_items_collection.insert_one({
-                'item_id': item_id,
-                'user_id': user['_id'],
-            })
-            return "Successfully added item to liked items", 200
-        else:
-            return "Item is already in liked items", 400
-    elif request.method == "GET":
-        user_id = request.args.get('user_id')
-        liked_items = liked_items_collection.find({'user_id': ObjectId(user_id)})
-        item_ids = [item['item_id'] for item in liked_items]
-
-        if item_ids:
-            closet_list = []
-            closet_items = []
-            for item_id in item_ids:
-                closet_doc = closet_collection.find({'item_id': item_id})
-                closet_items.append(closet_doc)
-
-            for closet_item in closet_items:
-                item_doc = items_collection.find_one({'_id': closet_item['item_id']})
-                if item_doc:
-                    item_doc['_id'] = str(item_doc['_id'])
-                    closet_item['_id'] = str(closet_item['_id'])
-                    closet_item['item'] = item_doc
-                    closet_item['user_id'] = str(closet_item['user_id'])
-                    del closet_item['item_id']
-                    closet_list.append(closet_item)
-
-            print(closet_list)
-            return jsonify(closet_list), 200
-        else:
-            return jsonify([]), 201
-    elif request.method == "DELETE":
-        data = request.json
-        email = data.get('email')
-        item = data.get('item')
-        item_id = ObjectId(item['_id'])
-        user = users_collection.find_one({'email': email})
-        user_id = user['_id']
-        liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
-        return "Successfully deleted item from liked items", 200
     
 @app.route('/liked_outfits', methods=["GET", "POST", "DELETE"])
 def liked_outfits():
