@@ -60,7 +60,7 @@ def init_search_autocomplete(query, index_name, autocomplete_index_fields):
 
     return search_engine
 
-@search_blueprint.route('/search', methods=['GET'])
+@search_blueprint.route('/', methods=['GET'])
 def search():
     db = current_app.mongo.drip
 
