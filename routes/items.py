@@ -4,7 +4,7 @@ from flask import (
     jsonify,
     request
 )
-from helpers.email_scraping_service import get_items
+from bson import ObjectId
 
 items_blueprint = Blueprint('items', __name__)
 
@@ -21,65 +21,69 @@ def items():
         result = items_collection.delete_many({})
         return f"Deleted {result.deleted_count} documents."
 
-"""
-@items_blueprint.route('/inbox', methods=["GET", "POST", "DELETE"])
-def inbox():
+@items_blueprint.route('/liked', methods=["GET"])
+def get_liked_items():
+    db = current_app.mongo.drip
+    closet_collection = db['collection']
+    items_collection = db['items']
+    liked_items_collection = db['liked_items']
+
+    user_id = request.args.get('user_id')
+    liked_items = liked_items_collection.find({'user_id': ObjectId(user_id)})
+    item_ids = [item['item_id'] for item in liked_items]
+
+    if item_ids:
+        closet_list = []
+        closet_items = []
+        for item_id in item_ids:
+            closet_doc = closet_collection.find({'item_id': item_id})
+            closet_items.append(closet_doc)
+
+        for closet_item in closet_items:
+            item_doc = items_collection.find_one({'_id': closet_item['item_id']})
+            if item_doc:
+                item_doc['_id'] = str(item_doc['_id'])
+                closet_item['_id'] = str(closet_item['_id'])
+                closet_item['item'] = item_doc
+                closet_item['user_id'] = str(closet_item['user_id'])
+                del closet_item['item_id']
+                closet_list.append(closet_item)
+
+        return jsonify(closet_list), 200
+    else:
+        return jsonify([]), 201
+
+@items_blueprint.route('/liked', methods=["POST"])
+def create_liked_items():
     db = current_app.mongo.drip
     users_collection = db['users']
-    items_collection = db['items']
-    brands_collection = db['brands']
-    closet_collection = db['closet']
+    liked_items_collection = db['liked_items']
 
-    if request.method == "POST":
-        data = request.json
-        email = data.get('email')
-        user = users_collection.find_one({'email': email})
-        gender = user['shopping_preference']
-        user_items = get_items(email)
+    data = request.json
+    email = data.get('email')
+    item = data.get('item')
+    user = users_collection.find_one({'email': email})
+    item_id = ObjectId(item['_id'])
+    if not liked_items_collection.find_one({'user_id': user['_id'], 'item_id': item_id}):
+        liked_items_collection.insert_one({
+            'item_id': item_id,
+            'user_id': user['_id'],
+        })
+        return "Successfully added item to liked items", 200
+    else:
+        return "Item is already in liked items", 400
 
-        for item in user_items:
-            # item logic
-            existing_item = items_collection.find_one({'item_name': item['item_name']})
-            if existing_item:
-                if not closet_collection.find_one({
-                    'item_id': existing_item['_id'],
-                    'user_id': user['_id']
-                }):
-                    if existing_item['_id'] not in user.get('inbox', []):
-                        users_collection.update_one(
-                            {'_id': user['_id']},
-                            {'$push': {'inbox': existing_item['_id']}}
-                        )
-            else:
-                item['gender'] = gender
-                new_item = items_collection.insert_one(item)
-                item_id = new_item.inserted_id
-                users_collection.update_one(
-                    {'_id': user['_id']},
-                    {'$push': {'inbox': item_id}}
-                )
-            # brand logic
-            existing_brand = brands_collection.find_one({'brand_name': item['brand']})
-            if existing_brand:
-                brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
-            else:
-                brand = {'brand_name': item['brand'], 'purchasedCount': 1}
-                brands_collection.insert_one(brand)
-        return "Successfully added items to the database", 200
-    elif request.method == "GET":
-        email = request.args.get('email')
-        user = users_collection.find_one({'email': email})
-        inbox = user.get('inbox', [])
-        items = items_collection.find({'_id': {'$in': inbox}})
-        items_list = list(items)
-        for item in items_list:
-                item['_id'] = str(item['_id'])
-        return jsonify(items_list), 200
-    elif request.method == "DELETE":
-        email = request.args.get('email')
-        users_collection.update_one(
-            {'email': email},
-            {'$set': {'inbox': []}}
-        )
-        return "Successfully deleted items from inbox", 200
-"""
+@items_blueprint.route('/liked', methods=["DELETE"])
+def delete_liked_items():
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    liked_items_collection = db['liked_items']
+
+    data = request.json
+    email = data.get('email')
+    item = data.get('item')
+    item_id = ObjectId(item['_id'])
+    user = users_collection.find_one({'email': email})
+    user_id = user['_id']
+    liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
+    return "Successfully deleted item from liked items", 200
