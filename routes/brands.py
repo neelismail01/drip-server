@@ -6,6 +6,7 @@ from flask import (
 )
 
 from bson.json_util import dumps
+from bson.objectid import ObjectId
 
 brands_blueprint = Blueprint('brands', __name__)
 
@@ -18,15 +19,41 @@ def all_brands():
         json_brands = dumps(brands)
         return json_brands, 201
     
-@brands_blueprint.route('/<brand_name>', methods=["GET"])
-def brand(brand_name):
+@brands_blueprint.route('/<brand_name>/<my_user_id>', methods=["GET"])
+def brand(brand_name, my_user_id):
     db = current_app.mongo.drip
-    collection = db['brands']
+    brands_collection = db['brands']
+    users_collection = db['users']
+    social_graph_collection = db['social_graph']
+
     if request.method == "GET":
-        brand = collection.find_one({'brand_name': brand_name})
+        brand = brands_collection.find_one({'brand_name': brand_name})
         if not brand:
             return {}, 200
+            
         brand['_id'] = str(brand['_id'])
+        follower_ids = brand['followers']
+        follower_object_ids = [ObjectId(follower_id) for follower_id in follower_ids]
+        users = []
+        for user_id in follower_object_ids:
+            user = users_collection.find_one({'_id': user_id})
+            if user:
+                is_following = social_graph_collection.find_one({
+                    "follower_id": my_user_id,
+                    "followee_id": str(user_id),
+                    "status": "SUCCESSFUL"
+                }) is not None
+
+                user_data = {
+                    'id': str(user_id),
+                    'name': user.get('name', ''),
+                    'email': user.get('email', ''),
+                    'username': user.get('username', ''),
+                    'profile_pic': user.get('profile_pic', ''),
+                    "is_following": is_following
+                }
+                users.append(user_data)
+        brand['followers'] = users
         return jsonify(brand), 200
     
 @brands_blueprint.route('/outfit_brands', methods=["GET"])
@@ -62,12 +89,10 @@ def brand_closet(brand_name):
     items_collection = db['items']
     closet_collection = db['closet']
 
-    # Find the brand
     brand = brands_collection.find_one({'brand_name': brand_name})
     if not brand:
         return "Brand not found", 404
     
-    # Find items for the brand
     items = list(items_collection.find({"brand": brand_name}))
     item_ids = [item['_id'] for item in items]
     
@@ -82,14 +107,13 @@ def brand_closet(brand_name):
         item_id = closet_item['item_id']
         item = items_dict.get(item_id)
         
-        # Ensure the item_id is converted to a string
         if item:
             item['_id'] = str(item['_id'])
         
         closet_item['item'] = item
         closet_item.pop('item_id', None)
         closet_item['_id'] = str(closet_item['_id'])
-        closet_item['user_id'] = str(closet_item['user_id'])  # Convert user_id to string
+        closet_item['user_id'] = str(closet_item['user_id'])
     
     return jsonify(closet_items), 200
 
@@ -172,3 +196,41 @@ def liked_items(brand_name):
             sorted_liked_items.append(item)
 
     return jsonify(sorted_liked_items), 200
+
+@brands_blueprint.route('/follow', methods=["POST"])
+def follow_brand():
+  db = current_app.mongo.drip
+  brands_collection = db['brands']
+  data = request.json
+  brand_name = data.get('brand_name')
+  user_id = data.get('user_id')
+
+  brand = brands_collection.find_one({'brand_name': brand_name})
+  if not brand:
+    return "Brand not found", 404
+
+  brands_collection.update_one(
+      {'_id': brand['_id']},
+      {'$push': {'followers': user_id}}
+  )
+
+  return "Successfully followed brand", 200
+
+@brands_blueprint.route('/unfollow', methods=["POST"])
+def unfollow_brand():
+  db = current_app.mongo.drip
+  brands_collection = db['brands']
+  data = request.json
+  brand_name = data.get('brand_name')
+  user_id = data.get('user_id')
+
+  brand = brands_collection.find_one({'brand_name': brand_name})
+  if not brand:
+    return "Brand not found", 404
+
+  brands_collection.update_one(
+      {'_id': brand['_id']},
+      {'$pull': {'followers': user_id}}
+  )
+
+  return "Successfully unfollowed brand", 200

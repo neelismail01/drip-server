@@ -449,6 +449,7 @@ def outfit_wishlist():
 
 @app.route('/liked_items', methods=["GET", "POST", "DELETE"])
 def liked_items():
+    closet_collection = db['collection']
     users_collection = db['users']
     items_collection = db['items']
     liked_items_collection = db['liked_items']
@@ -471,14 +472,28 @@ def liked_items():
         user_id = request.args.get('user_id')
         liked_items = liked_items_collection.find({'user_id': ObjectId(user_id)})
         item_ids = [item['item_id'] for item in liked_items]
-        if (item_ids):
-            items = items_collection.find({'_id': {'$in': item_ids}})
-            items_list = list(items)
-            for item in items_list:
-                item['_id'] = str(item['_id'])
-            return jsonify(items_list), 200
+
+        if item_ids:
+            closet_list = []
+            closet_items = []
+            for item_id in item_ids:
+                closet_doc = closet_collection.find({'item_id': item_id})
+                closet_items.append(closet_doc)
+
+            for closet_item in closet_items:
+                item_doc = items_collection.find_one({'_id': closet_item['item_id']})
+                if item_doc:
+                    item_doc['_id'] = str(item_doc['_id'])
+                    closet_item['_id'] = str(closet_item['_id'])
+                    closet_item['item'] = item_doc
+                    closet_item['user_id'] = str(closet_item['user_id'])
+                    del closet_item['item_id']
+                    closet_list.append(closet_item)
+
+            print(closet_list)
+            return jsonify(closet_list), 200
         else:
-            return [], 201
+            return jsonify([]), 201
     elif request.method == "DELETE":
         data = request.json
         email = data.get('email')
