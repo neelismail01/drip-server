@@ -47,25 +47,6 @@ app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
 app.register_blueprint(assistant_blueprint, url_prefix="/assistant")
 
-@app.route('/profile', methods=["PUT"])
-def profile():
-    if request.method == "PUT":
-        users_collection = db['users']
-        data = request.json
-        email = data.get('email')
-        profile_picture = data.get('profile_picture')
-        
-        # check if user already exists
-        existing_user = users_collection.find_one({'email': email})
-        if existing_user:
-            users_collection.update_one(
-                {'email': email},
-                {'$set': {'profile_picture': profile_picture}}
-            )
-            return 'User profile updated', 200
-        else:
-            return 'User not found', 404
-
 @app.route('/outfits', methods=["GET", "POST", "DELETE"])
 def outfits():
     users_collection = db['users']
