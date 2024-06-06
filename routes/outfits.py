@@ -25,7 +25,7 @@ def upload_media_to_gcs(image_data, bucket_name, destination_blob_name, content_
     # Get the URL of the uploaded image
     return blob.public_url
 
-@outfits_blueprint.route('/outfits', methods=["GET", "POST", "DELETE"])
+@outfits_blueprint.route('/', methods=["GET", "POST", "DELETE"])
 def outfits():
     db = current_app.mongo.drip
     users_collection = db['users']
