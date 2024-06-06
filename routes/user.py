@@ -204,6 +204,7 @@ def closet():
 
         email = data.get('email')
         user = users_collection.find_one({'email': email})
+        user_id = user['_id']
         gender = user['preference']
 
         brand = data.get('brand')
@@ -232,9 +233,17 @@ def closet():
         # add brand to brand collection if it does not exist
         existing_brand = brands_collection.find_one({'brand_name': brand})
         if existing_brand:
-            brands_collection.update_one({'_id': existing_brand['_id']}, {'$inc': {'purchasedCount': 1}})
+            if user_id not in existing_brand['followers']:
+                brands_collection.update_one(
+                    {'_id': existing_brand['_id']},
+                    {'$push': {'followers': str(user_id)}}
+                )
+            brands_collection.update_one(
+                {'_id': existing_brand['_id']},
+                {'$inc': {'purchasedCount': 1}}
+            )
         else:
-            new_brand = {'brand_name': brand, 'purchasedCount': 1, 'logo': "", 'followers': []}
+            new_brand = {'brand_name': brand, 'purchasedCount': 1, 'profile_pic': "", 'followers': [str(user_id)]}
             brands_collection.insert_one(new_brand)
 
         # add item to item collection
@@ -477,3 +486,21 @@ def liked_count(user_id):
     total_liked_count = liked_items_count + liked_outfits_count
 
     return jsonify({'total_liked_count': total_liked_count}), 200
+
+@user_blueprint.route('/brands_following/<user_id>/<my_user_id>', methods=["GET"])
+def get_brands_following(user_id, my_user_id):
+    db = current_app.mongo.drip
+    brands_collection = db['brands']
+
+    followed_brands_cursor = brands_collection.find({'followers': user_id})
+    followed_brands = []
+    for brand in followed_brands_cursor:
+        brand['_id'] = str(brand['_id'])
+        is_following_brand = False
+        for follower in brand['followers']:
+            if str(follower) == my_user_id:
+                is_following_brand = True
+        brand['is_following_brand'] = is_following_brand
+        followed_brands.append(brand)
+
+    return jsonify(followed_brands), 200
