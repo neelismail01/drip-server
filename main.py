@@ -57,50 +57,6 @@ def similar_items():
             item['_id'] = str(item['_id'])
     return jsonify(items_list), 200
 
-@app.route('/signup', methods=["POST"])
-def signup():
-    users_collection = db['users']
-    data = request.json
-    email = data.get('email')
-    name = data.get('name')
-    username = data.get('username')
-    phone_number = data.get('phone_number')
-    profile_pic = data.get('profile_pic')
-    shopping_preference = data.get('shopping_preference')
-
-    # check if user already exists
-    existing_user = users_collection.find_one({'email': email})
-    if existing_user:
-        return 'User already exists', 401
-
-    # insert user into users collection
-    user = {
-        'email': email,
-        'name': name,
-        'username': username,
-        'phone_number': phone_number,
-        'profile_pic': profile_pic,
-        'shopping_preference': shopping_preference,
-        'inbox': []
-    }
-    users_collection.insert_one(user)
-
-    return 'User signed up', 200
-
-@app.route('/login_test', methods=["POST"])
-def login_test():
-    users_collection = db['users']
-    data = request.json
-    email = data.get('email')
-
-    # check if user already exists
-    existing_user = users_collection.find_one({'email': email})
-    if existing_user:
-        return 'User logged in', 200
-
-    # User does not exist, return an error message
-    return 'Login error - no account associated with this email', 404
-
 @app.route('/inbox', methods=["GET", "POST", "DELETE"])
 def inbox():
     users_collection = db['users']
