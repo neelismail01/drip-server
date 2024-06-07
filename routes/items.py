@@ -87,3 +87,59 @@ def delete_liked_items():
     user_id = user['_id']
     liked_items_collection.delete_one({'user_id': user_id, 'item_id': item_id})
     return "Successfully deleted item from liked items", 200
+
+@items_blueprint.route('/wishlist', methods=["GET"])
+def get_items_wishlist():
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    items_collection = db['items']
+    wishlist_collection = db['wishlist']
+
+    email = request.args.get('email')
+    user = users_collection.find_one({'email': email})
+    user_id = user['_id']
+    wishlist_items = wishlist_collection.find({'user_id': ObjectId(user_id)})
+    item_ids = [item['item_id'] for item in wishlist_items]
+    if (item_ids):
+        items = items_collection.find({'_id': {'$in': item_ids}})
+        items_list = list(items)
+        for item in items_list:
+            item['_id'] = str(item['_id'])
+        return jsonify(items_list), 200
+    else:
+        return [], 201
+
+@items_blueprint.route('/wishlist', methods=["POST"])
+def create_items_wishlist():
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    wishlist_collection = db['wishlist']
+
+    data = request.json
+    email = data.get('email')
+    item = data.get('item')
+    user = users_collection.find_one({'email': email})
+    item_id = ObjectId(item['_id'])
+    if not wishlist_collection.find_one({'user_id': user['_id'], 'item_id': item_id}):
+        wishlist_collection.insert_one({
+            'item_id': item_id,
+            'user_id': user['_id'],
+        })
+        return "Successfully added item to the wishlist", 200
+    else:
+        return "Item is already in the wishlist", 400
+
+@items_blueprint.route('/wishlist', methods=["DELETE"])
+def delete_items_wishlist():
+    db = current_app.mongo.drip
+    users_collection = db['users']
+    wishlist_collection = db['wishlist']
+
+    data = request.json
+    email = data.get('email')
+    item = data.get('item')
+    item_id = ObjectId(item['_id'])
+    user = users_collection.find_one({'email': email})
+    user_id = user['_id']
+    wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
+    return "Successfully deleted item from wish list", 200
