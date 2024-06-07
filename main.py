@@ -7,7 +7,6 @@ from flask_session import Session
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson import ObjectId
-from bson.json_util import dumps
 import os
 import certifi
 
@@ -97,59 +96,6 @@ def closet():
 
         return jsonify(closet_items), 200
 
-@app.route('/items', methods=["GET", "POST", "DELETE"])
-def items():
-    collection = db['items']
-    if request.method == "GET":
-        all_items = list(collection.find())
-        for item in all_items:
-            item['_id'] = str(item['_id'])
-        return jsonify(all_items), 200
-    elif request.method == "DELETE":
-        result = collection.delete_many({})
-        return f"Deleted {result.deleted_count} documents."
-
-@app.route('/all_brands', methods=["GET"])
-def all_brands():
-    collection = db['brands']
-    if request.method == "GET":
-        brands = list(collection.find().sort('purchaseCount', -1))
-        json_brands = dumps(brands)
-        return json_brands, 201
-    
-@app.route('/brands/<brand_name>', methods=["GET"])
-def brand(brand_name):
-    collection = db['brands']
-    if request.method == "GET":
-        brand = collection.find_one({'brand_name': brand_name})
-        brand['_id'] = str(brand['_id'])
-        return jsonify(brand), 200
-    
-@app.route('/outfit_brands', methods=["GET"])
-def outfit_brands():
-    collection = db['brands']
-    if request.method == "GET":
-        brand_names = request.args.getlist("brand_names[]")
-        query = {"brand_name": {"$in": brand_names}}
-        brands = list(collection.find(query))
-        for brand in brands:
-            brand['_id'] = str(brand['_id'])
-        return jsonify(brands), 200
-
-@app.route('/items/<brand_name>', methods=["GET"])
-def brand_items(brand_name):
-    brands_collection = db['brands']
-    items_collection = db['items']
-    brand = brands_collection.find_one({'brand_name': brand_name})
-    if brand:
-        items = list(items_collection.find({"brand": brand_name}))
-        for item in items:
-            item['_id'] = str(item['_id'])
-        return jsonify(items), 200
-    else:
-        return "Brand not found", 404
-
 if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
     app.run(debug=True, port=8080)
-    ##get_items("nikhil.ismail20@gmail.com")
