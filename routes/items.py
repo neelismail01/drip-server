@@ -143,3 +143,14 @@ def delete_items_wishlist():
     user_id = user['_id']
     wishlist_collection.delete_one({'user_id': user_id, 'item_id': item_id})
     return "Successfully deleted item from wish list", 200
+
+@items_blueprint.route('/similar', methods=["GET"])
+def get_similar_items():
+    db = current_app.mongo.drip
+    collection = db["items"]
+    tag = request.args.get('tag')
+    items = collection.find({"tag": tag})
+    items_list = list(items)
+    for item in items_list:
+        item['_id'] = str(item['_id'])
+    return jsonify(items_list), 200

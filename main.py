@@ -45,16 +45,6 @@ app.register_blueprint(social_blueprint, url_prefix='/social')
 app.register_blueprint(user_blueprint, url_prefix='/user')
 app.register_blueprint(assistant_blueprint, url_prefix="/assistant")
 
-@app.route('/similar_items', methods=['GET'])
-def similar_items():
-    collection = db["items"]
-    tag = request.args.get('tag')
-    items = collection.find({"tag": tag})
-    items_list = list(items)
-    for item in items_list:
-            item['_id'] = str(item['_id'])
-    return jsonify(items_list), 200
-
 @app.route('/closet', methods=["GET", "POST", "DELETE"])
 def closet():
     users_collection = db['users']
