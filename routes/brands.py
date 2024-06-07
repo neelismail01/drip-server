@@ -234,12 +234,3 @@ def unfollow_brand():
   )
 
   return "Successfully unfollowed brand", 200
-
-@brands_blueprint.route('/<brand_name>', methods=["GET"])
-def brand(brand_name):
-    db = current_app.mongo.drip
-    collection = db['brands']
-    if request.method == "GET":
-        brand = collection.find_one({'brand_name': brand_name})
-        brand['_id'] = str(brand['_id'])
-        return jsonify(brand), 200

@@ -10,7 +10,8 @@ from bson import ObjectId
 import os
 import certifi
 
-from constants import MONGO_URI
+from services.GroqManager import GroqManager
+from services.DalleManager import DalleManager
 
 from routes.brands import brands_blueprint
 from routes.items import items_blueprint
@@ -20,6 +21,8 @@ from routes.user import user_blueprint
 from routes.social import social_blueprint
 from routes.assistant import assistant_blueprint
 
+from constants import MONGO_URI
+
 app = Flask(__name__)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
@@ -28,6 +31,12 @@ app.config['MONGO_URI'] = MONGO_URI
 # Initialize the MongoDB client
 mongo_client = MongoClient(app.config['MONGO_URI'], tlsCAFile=certifi.where())
 app.mongo = mongo_client
+
+# Initialize the GroqManager
+app.groq_manager = GroqManager(os.environ.get("GROQ_API_KEY"))
+
+# Initialize the DalleManager
+app.dalle_manager = DalleManager()
 
 Session(app)
 cors = CORS(app)
