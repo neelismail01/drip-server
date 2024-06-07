@@ -199,22 +199,22 @@ def liked_items(brand_name):
 
 @brands_blueprint.route('/follow', methods=["POST"])
 def follow_brand():
-  db = current_app.mongo.drip
-  brands_collection = db['brands']
-  data = request.json
-  brand_name = data.get('brand_name')
-  user_id = data.get('user_id')
+    db = current_app.mongo.drip
+    brands_collection = db['brands']
+    data = request.json
+    brand_name = data.get('brand_name')
+    user_id = data.get('user_id')
 
-  brand = brands_collection.find_one({'brand_name': brand_name})
-  if not brand:
-    return "Brand not found", 404
+    brand = brands_collection.find_one({'brand_name': brand_name})
+    if not brand:
+        return "Brand not found", 404
 
-  brands_collection.update_one(
-      {'_id': brand['_id']},
-      {'$push': {'followers': user_id}}
-  )
+    brands_collection.update_one(
+        {'_id': brand['_id']},
+        {'$push': {'followers': user_id}}
+    )
 
-  return "Successfully followed brand", 200
+    return "Successfully followed brand", 200
 
 @brands_blueprint.route('/unfollow', methods=["POST"])
 def unfollow_brand():
@@ -234,3 +234,12 @@ def unfollow_brand():
   )
 
   return "Successfully unfollowed brand", 200
+
+@brands_blueprint.route('/<brand_name>', methods=["GET"])
+def brand(brand_name):
+    db = current_app.mongo.drip
+    collection = db['brands']
+    if request.method == "GET":
+        brand = collection.find_one({'brand_name': brand_name})
+        brand['_id'] = str(brand['_id'])
+        return jsonify(brand), 200
