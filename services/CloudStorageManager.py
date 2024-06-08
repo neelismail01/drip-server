@@ -5,18 +5,18 @@ from io import BytesIO
 from PIL import Image
 
 class CloudStorageManager:
-    def __init__(self, bucket_name):
-        self.client = storage.Client()
-        self.bucket = self.client.bucket(bucket_name)
+    def __init__(self):
+        self.client = storage.Client(project="drip-382808")
 
-    def upload_file(self, file_path, destination_blob_name):
+    def upload_file(self, bucket_name, file_path, destination_blob_name):
         """
         Uploads a file to the bucket.
 
         :param file_path: The path to the file to upload.
         :param destination_blob_name: The name of the blob to store the file in.
         """
-        blob = self.bucket.blob(destination_blob_name)
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
 
         try:
             blob.upload_from_filename(file_path)
@@ -27,7 +27,7 @@ class CloudStorageManager:
             print(f"Failed to upload {file_path}: {e}")
             return None
 
-    def upload_base64_file(self, base64_string, destination_blob_name):
+    def upload_base64_file(self, bucket_name, base64_string, destination_blob_name):
         """
         Uploads a base64 encoded file to the bucket, converts it to PNG, and returns the public URL.
 
@@ -43,7 +43,7 @@ class CloudStorageManager:
             image.save(temp_file_path, format="PNG")
 
             # Upload the PNG image
-            public_url = self.upload_file(temp_file_path, f"{destination_blob_name}.png")
+            public_url = self.upload_file(bucket_name, temp_file_path, f"{destination_blob_name}.png")
 
             # Remove the temporary file
             os.remove(temp_file_path)
@@ -53,15 +53,15 @@ class CloudStorageManager:
             print(f"Failed to upload base64 file: {e}")
             return None
 
-
-    def download_file(self, source_blob_name, destination_file_name):
+    def download_file(self, bucket_name, source_blob_name, destination_file_name):
         """
         Downloads a blob from the bucket.
 
         :param source_blob_name: The name of the blob to download.
         :param destination_file_name: The name of the file to save the blob as.
         """
-        blob = self.bucket.blob(source_blob_name)
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(source_blob_name)
 
         try:
             blob.download_to_filename(destination_file_name)
@@ -69,13 +69,14 @@ class CloudStorageManager:
         except Exception as e:
             print(f"Failed to download {source_blob_name}: {e}")
 
-    def delete_file(self, blob_name):
+    def delete_file(self, bucket_name, blob_name):
         """
         Deletes a blob from the bucket.
 
         :param blob_name: The name of the blob to delete.
         """
-        blob = self.bucket.blob(blob_name)
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
 
         try:
             blob.delete()

@@ -27,7 +27,7 @@ def create_liked_item():
     items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
-    user_id = data.get("userId")
+    user_id = data.get("user_id")
     result = items_manager.create_liked_item(item_id, user_id)
     return (result, 200) if result == "Item was liked" else (result, 400)
 
@@ -36,14 +36,14 @@ def delete_liked_item():
     items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
-    user_id = data.get("userId")
+    user_id = data.get("user_id")
     result = items_manager.delete_liked_item(item_id, user_id)
     return result, 200
 
 @items_blueprint.route("/wishlist", methods=["GET"])
 def get_wishlist_items():
     items_manager = ItemsManager(current_app.mongo)
-    user_id = request.args.get("userId")
+    user_id = request.args.get("user_id")
     wishlist_items = items_manager.get_wishlist_items(user_id)
     return json.dumps(wishlist_items, cls=MongoJSONEncoder)
 
@@ -52,7 +52,7 @@ def create_wishlist_item():
     items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
-    user_id = data.get("userId")
+    user_id = data.get("user_id")
     result = items_manager.create_wishlist_item(item_id, user_id)
     return (result, 200) if result == "Item was added to wishlist" else (result, 400)
 
@@ -61,7 +61,7 @@ def delete_wishlist_item():
     items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
-    user_id = data.get("userId")
+    user_id = data.get("user_id")
     result = items_manager.delete_wishlist_item(item_id, user_id)
     return result, 200
 
