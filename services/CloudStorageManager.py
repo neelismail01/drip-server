@@ -16,14 +16,15 @@ class CloudStorageManager:
         # Get the URL of the uploaded image
         return blob.public_url
 
-    def download_file(self, source_blob_name, destination_file_name):
+    def download_file(self, bucket_name, source_blob_name, destination_file_name):
         """
         Downloads a blob from the bucket.
 
         :param source_blob_name: The name of the blob to download.
         :param destination_file_name: The name of the file to save the blob as.
         """
-        blob = self.bucket.blob(source_blob_name)
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(source_blob_name)
 
         try:
             blob.download_to_filename(destination_file_name)
@@ -31,13 +32,14 @@ class CloudStorageManager:
         except Exception as e:
             print(f"Failed to download {source_blob_name}: {e}")
 
-    def delete_file(self, blob_name):
+    def delete_file(self, bucket_name, blob_name):
         """
         Deletes a blob from the bucket.
 
         :param blob_name: The name of the blob to delete.
         """
-        blob = self.bucket.blob(blob_name)
+        bucket = self.client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
 
         try:
             blob.delete()
