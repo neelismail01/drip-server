@@ -19,18 +19,9 @@ class ItemsManager:
         SEARCH_ENGINE_ID = "d1062150d54a04ec6"
 
         brand = "".join(brand.split()).lower()
-
-        query = brand + " official website"
-
-        service = build(
-            "customsearch", "v1", developerKey=API_KEY
-        )
-
-        result = service.cse().list(
-            q=query,
-            cx=SEARCH_ENGINE_ID
-        ).execute()
-
+        query = "{} official website".format(brand)
+        service = build("customsearch", "v1", developerKey=API_KEY)
+        result = service.cse().list(q=query, cx=SEARCH_ENGINE_ID).execute()
         brand_website_link = None
         if "items" in result:
             for item in result['items']:

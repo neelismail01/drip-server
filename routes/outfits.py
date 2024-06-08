@@ -7,7 +7,7 @@ from flask import (
 import base64
 from datetime import datetime
 from services.OutfitsManager import OutfitsManager
-from services.CloudStorageManager import CloudStorageManager
+from services.CloudStorageManager import cloud_storage_manager
 from utils.MongoJsonEncoder import MongoJSONEncoder
 
 outfits_blueprint = Blueprint('outfits', __name__)
@@ -22,8 +22,6 @@ def get_outfits():
 @outfits_blueprint.route('/', methods=["POST"])
 def create_outfit():
     outfits_manager = OutfitsManager(current_app.mongo)
-    cloud_storager_manager = CloudStorageManager()
-
     data = request.json
     user_id = data.get('user_id')
     items = data.get('items')
@@ -37,8 +35,8 @@ def create_outfit():
         if media["type"] == "image":
             image_bytes = base64.b64decode(media["data"])
             destination = "outfit_{}_{}".format(user_id, str(datetime.now()))
-            media_url = cloud_storager_manager.upload_base64_file('drip-bucket-1', image_bytes, destination)
-            media_urls.append(media_url)
+            gcs_media_url = cloud_storage_manager.upload_media_to_gcs(image_bytes, destination, 'image/jpeg')
+            media_urls.append(gcs_media_url)
         else:
             print("Unsupported media format")
     result = outfits_manager.create_outfit(user_id, items, media_urls, name, caption, tags)
