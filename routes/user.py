@@ -15,33 +15,6 @@ from bson import json_util, ObjectId
 
 user_blueprint = Blueprint('user', __name__)
 
-def get_brand_website_link(brand):
-    API_KEY = "AIzaSyDLvRwgY8OXyNb4a7bas4aT-gXQvHkRwTE"
-    SEARCH_ENGINE_ID = "d1062150d54a04ec6"
-
-    brand = "".join(brand.split()).lower()
-
-    query = brand + " official website"
-
-    service = build(
-        "customsearch", "v1", developerKey=API_KEY
-    )
-
-    result = service.cse().list(
-        q=query,
-        cx=SEARCH_ENGINE_ID
-    ).execute()
-
-    brand_website_link = None
-    if "items" in result:
-        for item in result['items']:
-            link = item['link']
-            if re.search("(^https?://(?:www\.)?{}[^/]*\.[a-z]+)".format(re.escape(brand)), link):
-                brand_website_link = link
-                break
-
-    return brand_website_link
-
 # Initialize GCS client
 def get_storage_client():
     return storage.Client(project="drip-382808")
@@ -179,7 +152,6 @@ def get_user_profile_pic(user_id):
 
 @user_blueprint.route('/<user_id>', methods=["GET"])
 def get_user(user_id):
-    print("HEREEE")
     db = current_app.mongo.drip
     users_collection = db['users']
     user = users_collection.find_one({'_id': ObjectId(user_id)})

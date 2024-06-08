@@ -9,11 +9,34 @@ from utils.MongoJsonEncoder import MongoJSONEncoder
 
 items_blueprint = Blueprint("items", __name__)
 
-@items_blueprint.route("/", methods=["GET", "POST", "DELETE"])
+@items_blueprint.route("/", methods=["GET"])
 def get_all_items():
     items_manager = ItemsManager(current_app.mongo)
     all_items = items_manager.get_all_items()
     return json.dumps(all_items, cls=MongoJSONEncoder)
+
+@items_blueprint.route("/", methods=["POST"])
+def create_item():
+    items_manager = ItemsManager(current_app.mongo)
+    data = request.json
+    item = {
+        "user_id": data.get('user_id'),
+        "brand": data.get('brand'),
+        "color": data.get('color'),
+        "item_name": data.get('name'),
+        "caption": data.get('caption'),
+        "images": data.get('pictures'),
+        "tags": data.get('tags')
+    }
+    result = items_manager.create_item(item)
+    return (result, 200) if result == "Item was created" else (result, 400)
+
+@items_blueprint.route("/", methods=["GET"])
+def get_user_items():
+    user_id = request.args.get("user_id")
+    items_manager = ItemsManager(current_app.mongo)
+    user_items = items_manager.get_user_items(user_id)
+    return json.dumps(user_items, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/liked", methods=["GET"])
 def get_liked_items():
