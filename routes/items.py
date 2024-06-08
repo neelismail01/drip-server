@@ -2,10 +2,8 @@ import json
 from flask import (
     Blueprint,
     current_app,
-    jsonify,
     request
 )
-from bson import ObjectId
 from services.ItemsManager import ItemsManager
 from utils.MongoJsonEncoder import MongoJSONEncoder
 
