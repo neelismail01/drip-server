@@ -8,7 +8,7 @@ import base64
 from datetime import datetime
 from bson import json_util
 from services.UserManager import UserManager
-from services.CloudStorageManager import CloudStorageManager
+from services.CloudStorageManager import cloud_storage_manager
 from utils.MongoJsonEncoder import MongoJSONEncoder
 
 user_blueprint = Blueprint("user", __name__)
@@ -57,17 +57,15 @@ def get_user_profile_pic(user_id):
 @user_blueprint.route("/profile_picture", methods=["PUT"])
 def update_profile_picture():
     user_manager = UserManager(current_app.mongo)
-    cloud_storage_manager = CloudStorageManager()
-
     data = request.json
     user_id = data.get("user_id")
     profile_picture = data.get("profile_pic")
 
     image_bytes = base64.b64decode(profile_picture)
     destination = "profile_picture_{}_{}.jpg".format(str(user_id), str(datetime.now()))
-    media_url = cloud_storage_manager.upload_base64_file("drip-bucket-1", image_bytes, destination)
-    user_manager.update_profile_picture(user_id, media_url)
-    return json_util.dumps(media_url, cls=MongoJSONEncoder)
+    gcs_media_url = cloud_storage_manager.upload_media_to_gcs(image_bytes, destination, 'image/jpeg')
+    user_manager.update_profile_picture(user_id, gcs_media_url)
+    return json_util.dumps(gcs_media_url, cls=MongoJSONEncoder)
 
 @user_blueprint.route("/brands_following/<user_id>/<my_user_id>", methods=["GET"])
 def get_brands_following(user_id, my_user_id):
