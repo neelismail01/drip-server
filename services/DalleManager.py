@@ -1,5 +1,4 @@
 from openai import OpenAI
-import os
 
 class DalleManager:
     def __init__(self):
@@ -15,6 +14,6 @@ class DalleManager:
                 style=style
             ) 
             return response.data[0].url
-        except Exception as e:
+        except Exception:
             print("Failed to generate image with Dalle.")
             return None
