@@ -39,8 +39,6 @@ class ItemsManager:
     def create_item(self, item):
         user_object_id = ObjectId(item['user_id'])
         user = self.users_collection.find_one({'_id': user_object_id})
-        item['gender'] = user['preference']
-        item['product_page_link'] = self.get_brand_website_link(item['brand'])
         
         media_urls = []
         for media in item['images']:
@@ -52,6 +50,11 @@ class ItemsManager:
             else:
                 print("Unsupported media format")
         item['images'] = media_urls
+        item['user_id'] = user_object_id
+        item['gender'] = user['preference']
+        item['product_page_link'] = self.get_brand_website_link(item['brand'])
+        item['date_created'] = datetime.utcnow()
+        result = self.items_collection.insert_one(item)
 
         existing_brand = self.brands_collection.find_one({'brand_name': item['brand']})
         if existing_brand:
@@ -69,7 +72,6 @@ class ItemsManager:
             }
             self.brands_collection.insert_one(new_brand)
 
-        result = self.items_collection.insert_one(item)
         return "Item was created" if result else "Error creating item"
 
     def get_user_items(self, user_id):

@@ -12,10 +12,9 @@ from utils.MongoJsonEncoder import MongoJSONEncoder
 
 outfits_blueprint = Blueprint('outfits', __name__)
 
-@outfits_blueprint.route('/', methods=["GET"])
-def get_outfits():
+@outfits_blueprint.route('/<user_id>', methods=["GET"])
+def get_outfits(user_id):
     outfits_manager = OutfitsManager(current_app.mongo)
-    user_id = request.args.get('user_id')
     outfits = outfits_manager.get_outfits_for_user(user_id)
     return json.dumps(outfits, cls=MongoJSONEncoder)
 
@@ -25,8 +24,7 @@ def create_outfit():
     data = request.json
     user_id = data.get('user_id')
     items = data.get('items')
-    tags = data.get('tags')
-    name = data.get('name')
+    description = data.get('description')
     caption = data.get('caption')
     pictures = data.get('pictures')
 
@@ -39,7 +37,7 @@ def create_outfit():
             media_urls.append(gcs_media_url)
         else:
             print("Unsupported media format")
-    result = outfits_manager.create_outfit(user_id, items, media_urls, name, caption, tags)
+    result = outfits_manager.create_outfit(user_id, items, media_urls, description, caption, tags)
     return result, 200
 
 @outfits_blueprint.route('/liked', methods=["GET"])

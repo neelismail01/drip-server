@@ -23,17 +23,15 @@ def create_item():
         "user_id": data.get('user_id'),
         "brand": data.get('brand'),
         "color": data.get('color'),
-        "item_name": data.get('name'),
+        "description": data.get('description'),
         "caption": data.get('caption'),
         "images": data.get('pictures'),
-        "tags": data.get('tags')
     }
     result = items_manager.create_item(item)
     return (result, 200) if result == "Item was created" else (result, 400)
 
-@items_blueprint.route("/", methods=["GET"])
-def get_user_items():
-    user_id = request.args.get("user_id")
+@items_blueprint.route("/<user_id>", methods=["GET"])
+def get_user_items(user_id):
     items_manager = ItemsManager(current_app.mongo)
     user_items = items_manager.get_user_items(user_id)
     return json.dumps(user_items, cls=MongoJSONEncoder)

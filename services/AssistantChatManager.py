@@ -56,7 +56,7 @@ class AssistantChatManager:
                     '$or': [
                         {
                             '$and': [
-                                {'item_name': {'$regex': detail, '$options': 'i'}}
+                                {'description': {'$regex': detail, '$options': 'i'}}
                                 for detail in clothing_item.split(" ")
                             ]
                         }
