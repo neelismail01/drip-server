@@ -36,7 +36,7 @@ class SocialNetworkManager:
 
     def get_follower_count(self, user_id):
         user_object_id = ObjectId(user_id)
-        follower_count = self.social_connection.count_documents({ "followee_id": user_object_id, "status": "SUCCESSFUL" })
+        follower_count = self.social_collection.count_documents({ "followee_id": user_object_id, "status": "SUCCESSFUL" })
         return follower_count
 
     def get_following_count(self, user_id):
@@ -46,12 +46,12 @@ class SocialNetworkManager:
 
     def get_all_followers(self, user_id):
         user_object_id = ObjectId(user_id)
-        followers = list(self.social_connection.find({ "followee_id": user_object_id, "status": "SUCCESSFUL" }))
+        followers = list(self.social_collection.find({ "followee_id": user_object_id, "status": "SUCCESSFUL" }))
         return followers
 
     def get_all_following(self, user_id):
         user_object_id = ObjectId(user_id)
-        followings = list(self.social_connection.find({ "follower_id": user_object_id, "status": "SUCCESSFUL" }))
+        followings = list(self.social_collection.find({ "follower_id": user_object_id, "status": "SUCCESSFUL" }))
         return followings
 
 

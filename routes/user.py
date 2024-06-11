@@ -48,7 +48,7 @@ def get_user(user_id):
     user = user_manager.get_user_by_id(user_id)
     return json_util.dumps(user, cls=MongoJSONEncoder)
         
-@user_blueprint.route("/profile_pic/<user_id>", methods=["GET"])
+@user_blueprint.route("/profile_picture/<user_id>", methods=["GET"])
 def get_user_profile_pic(user_id):
     user_manager = UserManager(current_app.mongo)
     profile_picture = user_manager.get_profile_picture(user_id)
@@ -59,7 +59,7 @@ def update_profile_picture():
     user_manager = UserManager(current_app.mongo)
     data = request.json
     user_id = data.get("user_id")
-    profile_picture = data.get("profile_pic")
+    profile_picture = data.get("profile_picture")
 
     image_bytes = base64.b64decode(profile_picture)
     destination = "profile_picture_{}_{}.jpg".format(str(user_id), str(datetime.now()))

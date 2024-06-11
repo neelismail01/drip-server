@@ -23,9 +23,12 @@ class UserManager:
             "name": name,
             "profile_complete": False,
             "date_created": current_time,
-            "profile_picture": DEFAULT_PROFILE_PICTURE
+            "profile_picture": DEFAULT_PROFILE_PICTURE,
+            "username": None,
+            "preference": None,
+            "birthdate": None
         })
-        user_id = str(result.inserted_id)
+        user_id = result.inserted_id
         inserted_user = self.users_collection.find_one({"_id": user_id})
         return inserted_user
 
@@ -36,10 +39,10 @@ class UserManager:
     def complete_user_onboarding(self, user_id, username, preference, birthdate):
         user_object_id = ObjectId(user_id)
         date_object = datetime.strptime(birthdate, '%Y-%m-%d')
-        self.users_collection.update_one({
-            { "user_id": user_object_id },
-            { "username": username, "preference": preference, "birthdate": date_object, "profile_complete": True }
-        })
+        self.users_collection.update_one(
+            { "_id": user_object_id },
+            { "$set": { "username": username, "preference": preference, "birthdate": date_object, "profile_complete": True } }
+        )
         return "Updated user"
 
     def get_profile_picture(self, user_id):
@@ -49,6 +52,7 @@ class UserManager:
 
     def update_profile_picture(self, user_id, profile_picture):
         user_object_id = ObjectId(user_id)
-        self.users_collection.update_one({
-            { "user_id": user_object_id }, { "profile_picture": profile_picture }
-        })
+        self.users_collection.update_one(
+            { "_id": user_object_id },
+            { "profile_picture": profile_picture }
+        )
