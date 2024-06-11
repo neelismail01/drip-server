@@ -23,7 +23,7 @@ class OutfitsManager:
         ]))
         return outfits
 
-    def create_outfit(self, user_id, items, media_urls, name, caption, tags):
+    def create_outfit(self, user_id, items, media_urls, description, caption):
         item_ids = [ObjectId(item["_id"]) for item in items]
         existing_outfit = self.outfits_collection.find_one({'items': item_ids})
         if existing_outfit:
@@ -35,16 +35,15 @@ class OutfitsManager:
             "user_id": user_object_id,
             "items": item_ids,
             "images": media_urls,
-            "name": name,
+            "description": description,
             "caption": caption,
-            "tags": tags,
             "date_created": current_time
         })
         return "Created outfit"    
 
     def get_liked_outfits(self, user_id):
         user_object_id = ObjectId(user_id)
-        liked_outfits = list(self.liked_outfits_collection.find([
+        liked_outfits = list(self.liked_outfits_collection.aggregate([
             { "$match": {"user_id": user_object_id } },
             {
                 "$lookup": {
