@@ -54,5 +54,5 @@ class UserManager:
         user_object_id = ObjectId(user_id)
         self.users_collection.update_one(
             { "_id": user_object_id },
-            { "profile_picture": profile_picture }
+            { "$set": { "profile_picture": profile_picture } }
         )
