@@ -1,18 +1,15 @@
 from flask import (
     current_app,
     Blueprint,
-    jsonify,
     request
 )
-from bson import json_util, ObjectId
-from services.SocialNetworkManager import SocialNetworkManager
-from utils.MongoJsonEncoder import MongoJSONEncoder
+from bson import json_util
+from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 social_blueprint = Blueprint('social', __name__)
 
 @social_blueprint.route('/follow', methods=["POST"])
 def follow_user():
-    social_network_manager = SocialNetworkManager(current_app.mongo)
     data = request.json
     follower_info = { 
         "id": data.get("follower_id"), 
@@ -24,31 +21,28 @@ def follow_user():
         "name": data.get("followee_name"), 
         "username": data.get("followee_username")
     }
-    result = social_network_manager.follow_user(follower_info, followee_info)
+    result = current_app.social_network_manager.follow_user(follower_info, followee_info)
     return result, 200
 
 @social_blueprint.route('/unfollow', methods=["POST"])
 def unfollow_user():
-    social_network_manager = SocialNetworkManager(current_app.mongo)
     data = request.json
     follower_id = data.get("follower_id")
     followee_id = data.get("followee_id")
-    result = social_network_manager.unfollow_user(follower_id, followee_id)
+    result = current_app.social_network_manager.unfollow_user(follower_id, followee_id)
     return result, 200
 
 @social_blueprint.route('/', methods=["GET"])
 def check_following_relationship():
-    social_network_manager = SocialNetworkManager(current_app.mongo)
     follower_id = request.args.get("follower_id")
     followee_id = request.args.get("followee_id")
-    result = social_network_manager.get_following_relationship(follower_id, followee_id)
+    result = current_app.social_network_manager.get_following_relationship(follower_id, followee_id)
     return json_util.dumps(result, cls=MongoJSONEncoder)
     
 @social_blueprint.route('/stats/<user_id>', methods=["GET"])
 def get_follower_following_stats(user_id):
-    social_network_manager = SocialNetworkManager(current_app.mongo)
-    all_followers = social_network_manager.get_all_followers(user_id)
-    all_following = social_network_manager.get_all_following(user_id)
+    all_followers = current_app.social_network_manager.get_all_followers(user_id)
+    all_following = current_app.social_network_manager.get_all_following(user_id)
     following_dict = { follow["followee_id"]: follow for follow in all_following }
 
     following_list = [
