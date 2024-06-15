@@ -1,11 +1,12 @@
 steps:
-  # Docker Build
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/drip-server-docker-repo/myimage', 
-           '.']
-
-  # Docker Push
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/${PROJECT_ID}/drip-server-docker-repo/myimage', '.']
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 
-           'us-central1-docker.pkg.dev/${PROJECT_ID}/drip-server-docker-repo/myimage']
+    args: ['push', 'us-central1-docker.pkg.dev/${PROJECT_ID}/drip-server-docker-repo/myimage']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: [
+      'run', 'deploy', 'drip-server', 
+      '--image', 'us-central1-docker.pkg.dev/${PROJECT_ID}/drip-server-docker-repo/myimage',
+      '--region', 'us-central1',
+      '--platform', 'managed'
+    ]
