@@ -1,8 +1,8 @@
 from openai import OpenAI
 
 class DalleManager:
-    def __init__(self):
-        self.client = OpenAI()
+    def __init__(self, api_key):
+        self.client = OpenAI(api_key=api_key)
 
     def get_generated_image(self, prompt, n=1, size="1024x1024", style="vivid"):
         try:

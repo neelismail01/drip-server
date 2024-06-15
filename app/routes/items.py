@@ -4,20 +4,17 @@ from flask import (
     current_app,
     request
 )
-from services.ItemsManager import ItemsManager
-from utils.MongoJsonEncoder import MongoJSONEncoder
+from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 items_blueprint = Blueprint("items", __name__)
 
 @items_blueprint.route("/", methods=["GET"])
 def get_all_items():
-    items_manager = ItemsManager(current_app.mongo)
-    all_items = items_manager.get_all_items()
+    all_items = current_app.items_manager.get_all_items()
     return json.dumps(all_items, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/", methods=["POST"])
 def create_item():
-    items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item = {
         "user_id": data.get('user_id'),
@@ -27,63 +24,56 @@ def create_item():
         "caption": data.get('caption'),
         "images": data.get('pictures'),
     }
-    result = items_manager.create_item(item)
+    result = current_app.items_manager.create_item(item)
     return (result, 200) if result == "Item was created" else (result, 400)
 
 @items_blueprint.route("/<user_id>", methods=["GET"])
 def get_user_items(user_id):
-    items_manager = ItemsManager(current_app.mongo)
-    user_items = items_manager.get_user_items(user_id)
+    user_items = current_app.items_manager.get_user_items(user_id)
     return json.dumps(user_items, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/liked", methods=["GET"])
 def get_liked_items():
-    items_manager = ItemsManager(current_app.mongo)
     user_id = request.args.get("user_id")
-    liked_items = items_manager.get_liked_items(user_id)
+    liked_items = current_app.items_manager.get_liked_items(user_id)
     return json.dumps(liked_items, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/liked", methods=["POST"])
 def create_liked_item():
-    items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
     user_id = data.get("user_id")
-    result = items_manager.create_liked_item(item_id, user_id)
+    result = current_app.items_manager.create_liked_item(item_id, user_id)
     return (result, 200) if result == "Item was liked" else (result, 400)
 
 @items_blueprint.route("/liked", methods=["DELETE"])
 def delete_liked_item():
-    items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
     user_id = data.get("user_id")
-    result = items_manager.delete_liked_item(item_id, user_id)
+    result = current_app.items_manager.delete_liked_item(item_id, user_id)
     return result, 200
 
 @items_blueprint.route("/wishlist", methods=["GET"])
 def get_wishlist_items():
-    items_manager = ItemsManager(current_app.mongo)
     user_id = request.args.get("user_id")
-    wishlist_items = items_manager.get_wishlist_items(user_id)
+    wishlist_items = current_app.items_manager.get_wishlist_items(user_id)
     return json.dumps(wishlist_items, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/wishlist", methods=["POST"])
 def create_wishlist_item():
-    items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
     user_id = data.get("user_id")
-    result = items_manager.create_wishlist_item(item_id, user_id)
+    result = current_app.items_manager.create_wishlist_item(item_id, user_id)
     return (result, 200) if result == "Item was added to wishlist" else (result, 400)
 
 @items_blueprint.route("/wishlist", methods=["DELETE"])
 def delete_wishlist_item():
-    items_manager = ItemsManager(current_app.mongo)
     data = request.json
     item_id = data.get("itemId")
     user_id = data.get("user_id")
-    result = items_manager.delete_wishlist_item(item_id, user_id)
+    result = current_app.items_manager.delete_wishlist_item(item_id, user_id)
     return result, 200
 
 @items_blueprint.route("/similar", methods=["GET"])

@@ -4,27 +4,24 @@ from flask import (
     Blueprint,
     request
 )
-from utils.constants.llm_prompts import (
+from app.utils.constants.llm_prompts import (
     ASSISTANT_IMAGE_GENERATION_PROMPT,
     ASSISTANT_MISUSE_PROMPT,
     ASSISTANT_MISUSE_RESPONSE,
     ASSISTANT_OUTFIT_ITEM_EXTRACTION_PROMPT,
 )
-from services.AssistantChatManager import AssistantChatManager
-from utils.MongoJsonEncoder import MongoJSONEncoder
+from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 assistant_blueprint = Blueprint('assistant', __name__)
     
 @assistant_blueprint.route('/chats/<user_id>', methods=["GET"])
 def get_all_chats(user_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
-    chats = assistant_chat_manager.get_all_chats(user_id)
+    chats = current_app.assistant_chat_manager.get_all_chats(user_id)
     return json.dumps(chats, cls=MongoJSONEncoder)
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["GET"])
 def get_chat(chat_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
-    chat = assistant_chat_manager.get_chat(chat_id)
+    chat = current_app.assistant_chat_manager.get_chat(chat_id)
     return json.dumps(chat, cls=MongoJSONEncoder)
 
 def evaluate_user_message_for_misuse(message):
@@ -41,7 +38,6 @@ def get_chat_response(chat_history):
     misuse = evaluate_user_message_for_misuse(most_recent_message)
     if misuse:
         return ASSISTANT_MISUSE_RESPONSE
-
     text_messages = list(filter(lambda item: item["content_type"] == "text", chat_history))
     groq_messages = list(map(lambda item: { "role": item["role"], "content": item["text"] }, text_messages))
     chat_response = current_app.groq_manager.get_chat_response(groq_messages, 512)
@@ -49,7 +45,6 @@ def get_chat_response(chat_history):
 
 @assistant_blueprint.route('/chat/<user_id>', methods=["POST"])
 def create_chat(user_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
     data = request.json
     chat_history = data.get("chatHistory")
     chat_response = get_chat_response(chat_history)
@@ -59,12 +54,11 @@ def create_chat(user_id):
         "text": chat_response,
         "content_type": "text"
     })
-    chat_id = assistant_chat_manager.create_chat(user_id, chat_history)
+    chat_id = current_app.assistant_chat_manager.create_chat(user_id, chat_history)
     return json.dumps({  "chat_response": chat_response, "chat_id": chat_id }, cls=MongoJSONEncoder)
 
 @assistant_blueprint.route('/chat/<chat_id>', methods=["PUT"])
 def update_chat(chat_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
     data = request.json
     chat_history = data.get("chatHistory")
     chat_response = get_chat_response(chat_history)
@@ -75,12 +69,11 @@ def update_chat(chat_id):
         "content_type": "text"
     })
     new_messages = chat_history[-2:]
-    assistant_chat_manager.update_chat(chat_id, new_messages)
+    current_app.assistant_chat_manager.update_chat(chat_id, new_messages)
     return json.dumps({ "chat_response": chat_response }, cls=MongoJSONEncoder)
 
 @assistant_blueprint.route('/image/<chat_id>', methods=["POST"])
 def create_outfit_image(chat_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
     data = request.json
     prompt = data.get("prompt")
     chat_history = data.get("chatHistory")
@@ -92,7 +85,7 @@ def create_outfit_image(chat_id):
         "image": image_url,
         "content_type": "image"
     }]
-    assistant_chat_manager.update_chat(chat_id, new_messages)
+    current_app.assistant_chat_manager.update_chat(chat_id, new_messages)
     return json.dumps({ "image_url": image_url }, cls=MongoJSONEncoder)
 
 def extract_items_from_outfit_description(outfit_description):
@@ -105,17 +98,16 @@ def extract_items_from_outfit_description(outfit_description):
 
 @assistant_blueprint.route('/search/<chat_id>', methods=["POST"])
 def search_items(chat_id):
-    assistant_chat_manager = AssistantChatManager(current_app.mongo)
     data = request.json
     outfit_description = data.get("outfitDescription")
     chat_history = data.get("chatHistory")
     extracted_items = extract_items_from_outfit_description(outfit_description)
-    relevant_items = assistant_chat_manager.search_for_relevant_items(extracted_items)
+    relevant_items = current_app.assistant_chat_manager.search_for_relevant_items(extracted_items)
     new_messages = [{
         "id": str(len(chat_history) + 1),
         "role": "assistant",
         "relevant_items": relevant_items,
         "content_type": "relevant_items"
     }]
-    assistant_chat_manager.update_chat(chat_id, new_messages)
+    current_app.assistant_chat_manager.update_chat(chat_id, new_messages)
     return json.dumps({ "relevant_items": relevant_items }, cls=MongoJSONEncoder)
