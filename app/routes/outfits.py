@@ -33,7 +33,7 @@ def create_outfit():
             media_urls.append(gcs_media_url)
         else:
             print("Unsupported media format")
-    result = current_app.outfits_manager.create_outfit(user_id, items, media_urls, description, caption, tags)
+    result = current_app.outfits_manager.create_outfit(user_id, items, media_urls, description, caption)
     return result, 200
 
 @outfits_blueprint.route('/liked', methods=["GET"])

@@ -1,12 +1,14 @@
+import json
 from flask import (
     Blueprint,
     current_app,
     jsonify,
     request
 )
-
 from bson.json_util import dumps
 from bson.objectid import ObjectId
+from urllib.parse import unquote
+from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 brands_blueprint = Blueprint('brands', __name__)
 
@@ -62,11 +64,12 @@ def outfit_brands():
     collection = db['brands']
     if request.method == "GET":
         brand_names = request.args.getlist("brand_names[]")
-        query = {"brand_name": {"$in": brand_names}}
+        decoded_brand_names = [unquote(name) for name in brand_names]
+        query = {"brand_name": {"$in": decoded_brand_names}}
         brands = list(collection.find(query))
         for brand in brands:
             brand['_id'] = str(brand['_id'])
-        return jsonify(brands), 200
+        return json.dumps(brands, cls=MongoJSONEncoder), 200
 
 @brands_blueprint.route('/items/<brand_name>', methods=["GET"])
 def brand_items(brand_name):
@@ -87,35 +90,14 @@ def brand_closet(brand_name):
     db = current_app.mongo.drip
     brands_collection = db['brands']
     items_collection = db['items']
-    closet_collection = db['closet']
 
     brand = brands_collection.find_one({'brand_name': brand_name})
     if not brand:
         return "Brand not found", 404
     
     items = list(items_collection.find({"brand": brand_name}))
-    item_ids = [item['_id'] for item in items]
     
-    # Find closet documents with the found item IDs
-    closet_items = list(closet_collection.find({'item_id': {'$in': item_ids}}))
-    
-    # Create a dictionary for items with item_id as the key
-    items_dict = {item['_id']: item for item in items}
-    
-    # Replace item_id with the complete item document in closet documents
-    for closet_item in closet_items:
-        item_id = closet_item['item_id']
-        item = items_dict.get(item_id)
-        
-        if item:
-            item['_id'] = str(item['_id'])
-        
-        closet_item['item'] = item
-        closet_item.pop('item_id', None)
-        closet_item['_id'] = str(closet_item['_id'])
-        closet_item['user_id'] = str(closet_item['user_id'])
-    
-    return jsonify(closet_items), 200
+    return json.dumps(items, cls=MongoJSONEncoder), 200
 
 @brands_blueprint.route('/outfits/<brand_name>', methods=["GET"])
 def brand_outfits(brand_name):
@@ -148,7 +130,7 @@ def brand_outfits(brand_name):
         for item in outfit['items']:
             item['_id'] = str(item['_id'])
 
-    return jsonify(outfits), 200
+    return json.dumps(outfits, cls=MongoJSONEncoder), 200
 
 @brands_blueprint.route('/liked_count/<brand_name>', methods=["GET"])
 def liked_count(brand_name):
@@ -195,7 +177,8 @@ def liked_items(brand_name):
             item['_id'] = str(item['_id'])
             sorted_liked_items.append(item)
 
-    return jsonify(sorted_liked_items), 200
+    return json.dumps(sorted_liked_items, cls=MongoJSONEncoder), 200
+
 
 @brands_blueprint.route('/follow', methods=["POST"])
 def follow_brand():
