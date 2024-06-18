@@ -1,8 +1,6 @@
 Flask==2.3.2
-flask_cors==3.0.10
 google_api_python_client==2.84.0
 google_auth_oauthlib==1.0.0
-google-auth==2.30.0
 google-cloud-secret-manager
 google-cloud-storage==2.14.0
 protobuf==4.23.3
@@ -11,3 +9,4 @@ gunicorn==20.1.0
 certifi
 groq
 openai
+cohere
