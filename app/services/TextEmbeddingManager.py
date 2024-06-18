@@ -1,4 +1,4 @@
-from Cohere import cohere
+import cohere
 
 class TextEmbeddingManager():
     def __init__(self, api_key):
