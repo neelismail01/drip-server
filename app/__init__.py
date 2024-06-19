@@ -2,18 +2,18 @@ from flask import Flask
 from pymongo import MongoClient
 import certifi
 
-from app.services.AssistantChatManager import AssistantChatManager
-from app.services.ItemsManager import ItemsManager
-from app.services.OutfitsManager import OutfitsManager
-from app.services.SocialNetworkManager import SocialNetworkManager
-from app.services.UserManager import UserManager
+from app.services.internal.AssistantChatManager import AssistantChatManager
+from app.services.internal.ItemsManager import ItemsManager
+from app.services.internal.OutfitsManager import OutfitsManager
+from app.services.internal.SocialNetworkManager import SocialNetworkManager
+from app.services.internal.UserManager import UserManager
 
-from app.services.BrandSearchManager import BrandSearchManager
-from app.services.CloudStorageManager import CloudStorageManager
-from app.services.DalleManager import DalleManager
-from app.services.GroqManager import GroqManager
-from app.services.SecretManager import SecretManager
-from app.services.TextEmbeddingManager import TextEmbeddingManager
+from app.services.external.BrandSearchManager import BrandSearchManager
+from app.services.external.CloudStorageManager import CloudStorageManager
+from app.services.external.DalleManager import DalleManager
+from app.services.external.GroqManager import GroqManager
+from app.services.external.SecretManager import SecretManager
+from app.services.external.TextEmbeddingManager import TextEmbeddingManager
 
 from app.routes.brands import brands_blueprint
 from app.routes.items import items_blueprint

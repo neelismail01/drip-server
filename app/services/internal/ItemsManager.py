@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
-from app.services.CloudStorageManager import cloud_storage_manager
+from app.services.external.CloudStorageManager import cloud_storage_manager
 from googleapiclient.discovery import build
 import re
 import base64
