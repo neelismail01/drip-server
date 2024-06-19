@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
-from app.utils.constants.storage_constants import DEFAULT_PROFILE_PICTURE
+from app.utils.constants import DEFAULT_PROFILE_PICTURE
 
 class UserManager:
     def __init__(self, mongo_client):

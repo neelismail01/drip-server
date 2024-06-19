@@ -4,7 +4,7 @@ from flask import (
     Blueprint,
     request
 )
-from app.utils.constants.llm_prompts import (
+from app.utils.constants import (
     ASSISTANT_IMAGE_GENERATION_PROMPT,
     ASSISTANT_MISUSE_PROMPT,
     ASSISTANT_MISUSE_RESPONSE,

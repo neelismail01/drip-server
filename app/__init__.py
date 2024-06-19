@@ -8,6 +8,7 @@ from app.services.OutfitsManager import OutfitsManager
 from app.services.SocialNetworkManager import SocialNetworkManager
 from app.services.UserManager import UserManager
 
+from app.services.BrandSearchManager import BrandSearchManager
 from app.services.CloudStorageManager import CloudStorageManager
 from app.services.DalleManager import DalleManager
 from app.services.GroqManager import GroqManager
@@ -31,6 +32,7 @@ def create_app():
     MONGO_DB_URI = secret_manager.get_secret("MONGO_DB_URI")
     GROQ_API_KEY = secret_manager.get_secret("GROQ_API_KEY")
     OPENAI_API_KEY = secret_manager.get_secret("OPENAI_API_KEY")
+    BRAND_SEARCH_API_KEY = secret_manager.get_secret("BRAND_SEARCH_API_KEY")
 
     # Initialize the MongoDB client
     app.config['MONGODB_URI'] = MONGO_DB_URI
@@ -45,6 +47,7 @@ def create_app():
     app.user_manager = UserManager(app.mongo)
 
     # Initialize 3rd party service managers
+    app.brand_search_manager = BrandSearchManager(BRAND_SEARCH_API_KEY)
     app.cloud_storage_manager = CloudStorageManager()
     app.dalle_manager = DalleManager(OPENAI_API_KEY)
     app.groq_manager = GroqManager(GROQ_API_KEY)
