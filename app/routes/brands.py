@@ -5,7 +5,6 @@ from flask import (
     jsonify,
     request
 )
-import requests
 from bson.json_util import dumps
 from bson.objectid import ObjectId
 from urllib.parse import unquote
@@ -16,21 +15,10 @@ brands_blueprint = Blueprint('brands', __name__)
 @brands_blueprint.route('/search', methods=["GET"])
 def search_brands():
     query = request.args.get('query')
-
     if not query:
         return jsonify({"error": "Search query is required"}), 400
-
-    url = "https://api.brandfetch.io/v2/search/" + query
-    headers = {
-        "accept": "application/json",
-        "Authorization": "Bearer "
-    }
-
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return jsonify(response.json())
-    else:
-        return jsonify({"error": "Failed to fetch brand data"}), response.status_code
+    result, status_code = current_app.brand_search_manager.search_brands(query)
+    return json.dumps(result, cls=MongoJSONEncoder), status_code
 
 @brands_blueprint.route('/', methods=["GET"])
 def all_brands():

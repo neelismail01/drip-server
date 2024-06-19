@@ -1,3 +1,9 @@
+# Profile picture bucket
+DEFAULT_PROFILE_PICTURE = "https://storage.googleapis.com/drip-bucket-1/default_profile_pic.jpeg"
+
+# Brand search API base URL
+BRAND_FETCH_BASE_URL = "https://api.brandfetch.io/v2/search/"
+
 # Prompt for evaluating chat for misuse
 ASSISTANT_MISUSE_PROMPT = (
     """
@@ -6,9 +12,7 @@ ASSISTANT_MISUSE_PROMPT = (
     """
 )
 
-ASSISTANT_MISUSE_RESPONSE = (
-    "As a fashion assistant, I cannot answer this question."
-)
+ASSISTANT_MISUSE_RESPONSE = "As a fashion assistant, I cannot answer this question."
 
 # Prompt for Dalle image generation
 ASSISTANT_IMAGE_GENERATION_PROMPT = (
