@@ -12,6 +12,7 @@ from app.services.external.BrandSearchManager import BrandSearchManager
 from app.services.external.CloudStorageManager import CloudStorageManager
 from app.services.external.DalleManager import DalleManager
 from app.services.external.GroqManager import GroqManager
+from app.services.external.ImageVisionManager import ImageVisionManager
 from app.services.external.SecretManager import SecretManager
 from app.services.external.TextEmbeddingManager import TextEmbeddingManager
 
@@ -51,6 +52,7 @@ def create_app():
     app.cloud_storage_manager = CloudStorageManager()
     app.dalle_manager = DalleManager(OPENAI_API_KEY)
     app.groq_manager = GroqManager(GROQ_API_KEY)
+    app.image_vision_manager = ImageVisionManager(OPENAI_API_KEY)
     app.text_embeddings_manager = TextEmbeddingManager(OPENAI_API_KEY)
 
     # Register blueprints with app

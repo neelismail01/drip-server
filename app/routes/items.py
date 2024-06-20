@@ -84,3 +84,10 @@ def get_similar_items():
     items = collection.find({"tag": tag})
     items_list = list(items)
     return json.dumps(items_list, cls=MongoJSONEncoder)
+
+@items_blueprint.route("/image/analyze", methods=["POST"])
+def analyze_item_image():
+    data = request.json
+    image_url = data.get("image_url")
+    item_details = current_app.image_vision_manager.get_details_from_item_image(image_url)
+    return json.dumps(item_details, cls=MongoJSONEncoder)
