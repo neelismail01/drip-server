@@ -10,3 +10,4 @@ certifi
 groq
 openai
 cohere
+tldextract
