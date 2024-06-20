@@ -4,6 +4,7 @@ from app.services.external.CloudStorageManager import cloud_storage_manager
 from googleapiclient.discovery import build
 import re
 import base64
+import tldextract
 
 class ItemsManager:
     def __init__(self, mongo_client):
@@ -36,7 +37,7 @@ class ItemsManager:
         items = list(self.items_collection.find({}))
         return items
 
-    def create_item(self, item):
+    def create_item(self, item, brand):
         user_object_id = ObjectId(item['user_id'])
         user = self.users_collection.find_one({'_id': user_object_id})
         
@@ -52,7 +53,14 @@ class ItemsManager:
         item['images'] = media_urls
         item['user_id'] = user_object_id
         item['gender'] = user['preference']
-        item['product_page_link'] = self.get_brand_website_link(item['brand'])
+        if len(brand['domain']) > 0:
+            item['product_page_link'] = brand['domain']
+        else:
+            url = self.get_brand_website_link(item['brand'])
+            extracted = tldextract.extract(url)
+            domain = f"{extracted.domain}.{extracted.suffix}"
+            brand['domain'] = domain
+            item['product_page_link'] = brand['domain']
         item['date_created'] = datetime.utcnow()
         result = self.items_collection.insert_one(item)
 
@@ -64,10 +72,13 @@ class ItemsManager:
                     {'$push': {'followers': item['user_id']}}
                 )
         else:
+            if len(brand['icon']) == 0:
+                brand['icon'] = "https://storage.googleapis.com/drip-bucket-1/default_brand_profile_pic.jpg"
+            
             new_brand = {
                 'brand_name': item['brand'],
-                'username': "",
-                'profile_pic': "https://storage.googleapis.com/drip-bucket-1/default_brand_profile_pic.jpg", 
+                'domain': brand['domain'],
+                'profile_pic': brand['icon'], 
                 'followers': [item['user_id']]
             }
             self.brands_collection.insert_one(new_brand)

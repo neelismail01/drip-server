@@ -16,15 +16,16 @@ def get_all_items():
 @items_blueprint.route("/", methods=["POST"])
 def create_item():
     data = request.json
+    brand = data.get('brand')
     item = {
         "user_id": data.get('user_id'),
-        "brand": data.get('brand'),
+        "brand": brand['name'],
         "color": data.get('color'),
         "description": data.get('description'),
         "caption": data.get('caption'),
         "images": data.get('pictures'),
     }
-    result = current_app.items_manager.create_item(item)
+    result = current_app.items_manager.create_item(item, brand)
     return (result, 200) if result == "Item was created" else (result, 400)
 
 @items_blueprint.route("/<user_id>", methods=["GET"])
