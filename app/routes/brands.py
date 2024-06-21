@@ -202,7 +202,7 @@ def follow_brand():
 
     brands_collection.update_one(
         {'_id': brand['_id']},
-        {'$push': {'followers': user_id}}
+        {'$push': {'followers': ObjectId(user_id)}}
     )
 
     return "Successfully followed brand", 200
@@ -221,7 +221,7 @@ def unfollow_brand():
 
   brands_collection.update_one(
       {'_id': brand['_id']},
-      {'$pull': {'followers': user_id}}
+      {'$pull': {'followers': ObjectId(user_id)}}
   )
 
   return "Successfully unfollowed brand", 200

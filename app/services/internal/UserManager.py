@@ -43,7 +43,8 @@ class UserManager:
             { "_id": user_object_id },
             { "$set": { "username": username, "preference": preference, "birthdate": date_object, "profile_complete": True } }
         )
-        return "Updated user"
+        updated_user = self.users_collection.find_one({"_id": user_object_id})
+        return updated_user
 
     def get_profile_picture(self, user_id):
         user_object_id = ObjectId(user_id)
