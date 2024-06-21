@@ -6,7 +6,7 @@ from flask import (
 )
 import base64
 from datetime import datetime
-from bson import json_util
+from bson import json_util, ObjectId
 from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 user_blueprint = Blueprint("user", __name__)
@@ -28,8 +28,8 @@ def complete_user_profile_creation():
     username = data.get("username")
     preference = data.get("preference")
     birthdate = data.get("birthdate")
-    current_app.user_manager.complete_user_onboarding(user_id, username, preference, birthdate)
-    return "Successfully updated user"
+    updated_user = current_app.user_manager.complete_user_onboarding(user_id, username, preference, birthdate)
+    return json.dumps(updated_user, cls=MongoJSONEncoder), 200
 
 @user_blueprint.route("/username", methods=["GET"])
 def check_username_exists():
@@ -63,7 +63,7 @@ def update_profile_picture():
 def get_brands_following(user_id, my_user_id):
     db = current_app.mongo.drip
     brands_collection = db["brands"]
-    followed_brands_cursor = brands_collection.find({"followers": user_id})
+    followed_brands_cursor = brands_collection.find({"followers": ObjectId(user_id)})
     followed_brands = []
     for brand in followed_brands_cursor:
         brand["_id"] = str(brand["_id"])
