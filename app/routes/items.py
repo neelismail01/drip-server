@@ -19,11 +19,10 @@ def create_item():
     brand = data.get('brand')
     item = {
         "user_id": data.get('user_id'),
-        "brand": brand['name'],
-        "color": data.get('color'),
-        "description": data.get('description'),
+        "images": data.get('media'),
         "caption": data.get('caption'),
-        "images": data.get('pictures'),
+        "brand": brand['name'],
+        "description": data.get('description'),
     }
     result = current_app.items_manager.create_item(item, brand)
     return (result, 200) if result == "Item was created" else (result, 400)
@@ -89,6 +88,6 @@ def get_similar_items():
 @items_blueprint.route("/image/analyze", methods=["POST"])
 def analyze_item_image():
     data = request.json
-    image_url = data.get("image_url")
-    item_details = current_app.image_vision_manager.get_details_from_item_image(image_url)
+    base64_image = data.get("base64_image")
+    item_details = current_app.image_vision_manager.get_details_from_item_image(base64_image)
     return json.dumps(item_details, cls=MongoJSONEncoder)
