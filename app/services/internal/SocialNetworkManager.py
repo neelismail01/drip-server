@@ -14,9 +14,11 @@ class SocialNetworkManager:
             "follower_id": ObjectId(follower_info["id"]),
             "follower_name": follower_info["name"],
             "follower_username": follower_info["username"],
+            "follower_profilePicture": follower_info['profilePicture'],
             "followee_id": ObjectId(followee_info["id"]),
             "followee_name": followee_info["name"],
             "followee_username": followee_info["username"],
+            "followee_profilePicture": followee_info['profilePicture'],
             "status": "SUCCESSFUL",
             "date_created": current_time
         })

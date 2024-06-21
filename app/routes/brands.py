@@ -59,7 +59,7 @@ def brand(brand_name, my_user_id):
                     'name': user.get('name', ''),
                     'email': user.get('email', ''),
                     'username': user.get('username', ''),
-                    'profile_pic': user.get('profile_pic', ''),
+                    'profile_pic': user.get('profile_picture', ''),
                     "is_following": is_following
                 }
                 users.append(user_data)
