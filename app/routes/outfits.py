@@ -22,7 +22,7 @@ def create_outfit():
     items = data.get('items')
     description = data.get('description')
     caption = data.get('caption')
-    pictures = data.get('pictures')
+    pictures = data.get('media')
 
     media_urls = []
     for media in pictures:
