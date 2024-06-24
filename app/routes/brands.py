@@ -225,3 +225,31 @@ def unfollow_brand():
   )
 
   return "Successfully unfollowed brand", 200
+
+@brands_blueprint.route('/followers/<brand_name>', methods=["GET"])
+def get_brand_followers(brand_name):
+    db = current_app.mongo.drip
+    brands_collection = db['brands']
+    users_collection = db['users']
+
+    brand = brands_collection.find_one({'brand_name': brand_name})
+    if not brand:
+        return "Brand not found", 404
+
+    follower_ids = brand.get('followers', [])
+    follower_object_ids = [ObjectId(follower_id) for follower_id in follower_ids]
+    followers = []
+
+    for follower_id in follower_object_ids:
+        user = users_collection.find_one({'_id': follower_id})
+        if user:
+            user_data = {
+                'id': str(user['_id']),
+                'name': user.get('name', ''),
+                'email': user.get('email', ''),
+                'username': user.get('username', ''),
+                'profile_pic': user.get('profile_picture', '')
+            }
+            followers.append(user_data)
+
+    return jsonify(followers), 200
