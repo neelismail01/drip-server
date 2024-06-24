@@ -40,6 +40,7 @@ def check_username_exists():
 @user_blueprint.route("/<user_id>", methods=["GET"])
 def get_user(user_id):
     user = current_app.user_manager.get_user_by_id(user_id)
+    user['id'] = str(user['_id'])
     return json_util.dumps(user, cls=MongoJSONEncoder)
         
 @user_blueprint.route("/profile_picture/<user_id>", methods=["GET"])
