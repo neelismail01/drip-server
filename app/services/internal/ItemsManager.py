@@ -159,3 +159,13 @@ class ItemsManager:
         user_object_id = ObjectId(user_id)
         self.wishlist_items_collection.delete_one({ "item_id": item_object_id, "user_id": user_object_id })
         return "Sucessfully removed item from wishlist"
+
+    def get_item_liked_count(self, item_id):
+        item_object_id = ObjectId(item_id)
+        liked_count = self.liked_items_collection.count_documents({ "item_id": item_object_id })
+        return liked_count
+    
+    def get_item_added_count(self, item_id):
+        item_object_id = ObjectId(item_id)
+        added_count = self.wishlist_items_collection.count_documents({ "item_id": item_object_id })
+        return added_count

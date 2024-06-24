@@ -91,3 +91,17 @@ def analyze_item_image():
     base64_image = data.get("base64_image")
     item_details = current_app.image_vision_manager.get_details_from_item_image(base64_image)
     return json.dumps(item_details, cls=MongoJSONEncoder)
+
+@items_blueprint.route("/liked-count/<item_id>", methods=["GET"])
+def get_item_liked_count(item_id):
+    db = current_app.mongo.drip
+    collection = db["items"]
+    liked_count = current_app.items_manager.get_item_liked_count(item_id)
+    return json.dumps(liked_count, cls=MongoJSONEncoder)
+
+@items_blueprint.route("/added-count/<item_id>", methods=["GET"])
+def get_item_added_count(item_id):
+    db = current_app.mongo.drip
+    collection = db["items"]
+    added_count = current_app.items_manager.get_item_added_count(item_id)
+    return json.dumps(added_count, cls=MongoJSONEncoder)
