@@ -18,22 +18,19 @@ def get_outfits(user_id):
 @outfits_blueprint.route('/', methods=["POST"])
 def create_outfit():
     data = request.json
-    user_id = data.get('user_id')
-    items = data.get('items')
-    description = data.get('description')
-    caption = data.get('caption')
-    pictures = data.get('media')
-
-    media_urls = []
-    for media in pictures:
-        if media["type"] == "image":
-            image_bytes = base64.b64decode(media["data"])
-            destination = "outfit_{}_{}".format(user_id, str(datetime.now()))
-            gcs_media_url = current_app.cloud_storage_manager.upload_media_to_gcs(image_bytes, destination, 'image/jpeg')
-            media_urls.append(gcs_media_url)
-        else:
-            print("Unsupported media format")
-    result = current_app.outfits_manager.create_outfit(user_id, items, media_urls, description, caption)
+    user_id, preference, items, description, caption, pictures = (
+        data.get("user_id"),
+        data.get("preference"),
+        data.get("items"),
+        data.get("description"),
+        data.get("caption"),
+        data.get("media")
+    )
+    description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
+    media_urls = current_app.cloud_storage_manager.upload_multiple_media_to_gcs(pictures, user_id)
+    result = current_app.outfits_manager.create_outfit(
+        user_id, preference, items, media_urls, description, caption, description_embedding
+    )
     return result, 200
 
 @outfits_blueprint.route('/liked', methods=["GET"])

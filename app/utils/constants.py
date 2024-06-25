@@ -1,5 +1,6 @@
 # Profile picture bucket
 DEFAULT_PROFILE_PICTURE = "https://storage.googleapis.com/drip-bucket-1/default_profile_pic.jpeg"
+DEFAULT_BRAND_LOGO = "https://storage.googleapis.com/drip-bucket-1/default_brand_profile_pic.jpg"
 
 # Brand search API base URL
 BRAND_FETCH_BASE_URL = "https://api.brandfetch.io/v2/search/"
