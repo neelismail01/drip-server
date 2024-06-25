@@ -23,19 +23,17 @@ class OutfitsManager:
         ]))
         return outfits
 
-    def create_outfit(self, user_id, items, media_urls, description, caption):
+    def create_outfit(self, user_id, preference, items, media_urls, description, caption, embedding):
         item_ids = [ObjectId(item["_id"]) for item in items]
-        existing_outfit = self.outfits_collection.find_one({'items': item_ids})
-        if existing_outfit:
-            return "Outfit already found in the database"
-
         user_object_id = ObjectId(user_id)
         current_time = datetime.utcnow()
         self.outfits_collection.insert_one({
             "user_id": user_object_id,
+            "gender": preference,
             "items": item_ids,
             "images": media_urls,
             "description": description,
+            "embedding": embedding,
             "caption": caption,
             "date_created": current_time
         })

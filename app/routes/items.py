@@ -5,6 +5,7 @@ from flask import (
     request
 )
 from app.utils.MongoJsonEncoder import MongoJSONEncoder
+from app.utils.constants import DEFAULT_BRAND_LOGO
 
 items_blueprint = Blueprint("items", __name__)
 
@@ -16,15 +17,32 @@ def get_all_items():
 @items_blueprint.route("/", methods=["POST"])
 def create_item():
     data = request.json
-    brand = data.get('brand')
-    item = {
-        "user_id": data.get('user_id'),
-        "images": data.get('media'),
-        "caption": data.get('caption'),
-        "brand": brand['name'],
-        "description": data.get('description'),
+    user_id, preference, caption, description, product_page_link, brand_info, pictures = (
+        data.get("user_id"),
+        data.get("preference"),
+        data.get("caption"),
+        data.get("description"),
+        data.get("productPageLink"),
+        data.get("brandInfo"),
+        data.get("media"),
+    )
+
+    media_urls = current_app.cloud_storage_manager.upload_multiple_media_to_gcs(pictures, user_id)
+    description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
+    user_info = { "user_id": user_id, "preference": preference }
+    item_info = { 
+        "caption": caption, 
+        "description": description,
+        "embedding": description_embedding,
+        "media_urls": media_urls, 
+        "product_page_link": product_page_link
     }
-    result = current_app.items_manager.create_item(item, brand)
+    brand_info["domain"] = (
+        brand_info["domain"] or 
+        current_app.custom_search_manager.get_brand_website_domain(brand_info["name"])
+    )
+    brand_info["icon"] = brand_info["icon"] or DEFAULT_BRAND_LOGO
+    result = current_app.items_manager.create_item(user_info, item_info, brand_info)
     return (result, 200) if result == "Item was created" else (result, 400)
 
 @items_blueprint.route("/<user_id>", methods=["GET"])
@@ -94,14 +112,10 @@ def analyze_item_image():
 
 @items_blueprint.route("/liked-count/<item_id>", methods=["GET"])
 def get_item_liked_count(item_id):
-    db = current_app.mongo.drip
-    collection = db["items"]
     liked_count = current_app.items_manager.get_item_liked_count(item_id)
     return json.dumps(liked_count, cls=MongoJSONEncoder)
 
 @items_blueprint.route("/added-count/<item_id>", methods=["GET"])
 def get_item_added_count(item_id):
-    db = current_app.mongo.drip
-    collection = db["items"]
     added_count = current_app.items_manager.get_item_added_count(item_id)
     return json.dumps(added_count, cls=MongoJSONEncoder)

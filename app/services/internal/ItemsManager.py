@@ -1,10 +1,5 @@
 from bson import ObjectId
 from datetime import datetime
-from app.services.external.CloudStorageManager import cloud_storage_manager
-from googleapiclient.discovery import build
-import re
-import base64
-import tldextract
 
 class ItemsManager:
     def __init__(self, mongo_client):
@@ -15,74 +10,41 @@ class ItemsManager:
         self.wishlist_items_collection = self.db["wishlist_items"]
         self.brands_collection = self.db['brands']
 
-    def get_brand_website_link(self, brand):
-        API_KEY = "AIzaSyDLvRwgY8OXyNb4a7bas4aT-gXQvHkRwTE"
-        SEARCH_ENGINE_ID = "d1062150d54a04ec6"
-
-        brand = "".join(brand.split()).lower()
-        query = "{} official website".format(brand)
-        service = build("customsearch", "v1", developerKey=API_KEY)
-        result = service.cse().list(q=query, cx=SEARCH_ENGINE_ID).execute()
-        brand_website_link = None
-        if "items" in result:
-            for item in result['items']:
-                link = item['link']
-                if re.search("(^https?://(?:www\.)?{}[^/]*\.[a-z]+)".format(re.escape(brand)), link):
-                    brand_website_link = link
-                    break
-
-        return brand_website_link
-
     def get_all_items(self):
         items = list(self.items_collection.find({}))
         return items
 
-    def create_item(self, item, brand):
-        user_object_id = ObjectId(item['user_id'])
-        user = self.users_collection.find_one({'_id': user_object_id})
-        
-        media_urls = []
-        for media in item['images']:
-            if media["type"] == "image":
-                image_bytes = base64.b64decode(media["data"])
-                destination = "item_{}_{}".format(item['user_id'], str(datetime.now()))
-                gcs_media_url = cloud_storage_manager.upload_media_to_gcs(image_bytes, destination, 'image/jpeg')
-                media_urls.append(gcs_media_url)
-            else:
-                print("Unsupported media format")
-        item['images'] = media_urls
-        item['user_id'] = user_object_id
-        item['gender'] = user['preference']
-        if len(brand['domain']) > 0:
-            item['product_page_link'] = brand['domain']
-        else:
-            url = self.get_brand_website_link(item['brand'])
-            extracted = tldextract.extract(url)
-            domain = f"{extracted.domain}.{extracted.suffix}"
-            brand['domain'] = domain
-            item['product_page_link'] = brand['domain']
-        item['date_created'] = datetime.utcnow()
-        result = self.items_collection.insert_one(item)
-
-        existing_brand = self.brands_collection.find_one({'brand_name': item['brand']})
+    def insert_new_brand(self, user_id, brand_info):
+        existing_brand = self.brands_collection.find_one({'brand_name': brand_info["name"]})
         if existing_brand:
-            if item['user_id'] not in existing_brand['followers']:
+            if user_id not in existing_brand['followers']:
                 self.brands_collection.update_one(
                     {'_id': existing_brand['_id']},
-                    {'$push': {'followers': item['user_id']}}
+                    {'$push': {'followers': user_id}}
                 )
         else:
-            if len(brand['icon']) == 0:
-                brand['icon'] = "https://storage.googleapis.com/drip-bucket-1/default_brand_profile_pic.jpg"
-            
-            new_brand = {
-                'brand_name': item['brand'],
-                'domain': brand['domain'],
-                'profile_pic': brand['icon'], 
-                'followers': [item['user_id']]
-            }
-            self.brands_collection.insert_one(new_brand)
+            self.brands_collection.insert_one({
+                'brand_name': brand_info["name"],
+                'domain': brand_info["domain"],
+                'profile_pic': brand_info["icon"],
+                'followers': [user_id]
+            })
 
+    def create_item(self, user_info, item_info, brand_info):
+        user_object_id = ObjectId(user_info["user_id"])
+        self.insert_new_brand(user_object_id, brand_info)
+        current_time = datetime.utcnow()
+        result = self.items_collection.insert_one({
+            "user_id": user_object_id,
+            "gender": user_info["preference"],
+            "brand": brand_info["name"],
+            "description": item_info["description"],
+            "embedding": item_info["embedding"],
+            "caption": item_info["caption"],
+            "images": item_info["media_urls"],
+            "product_page_link": item_info["product_page_link"] or brand_info["domain"],
+            "date_created": current_time
+        })
         return "Item was created" if result else "Error creating item"
 
     def get_user_items(self, user_id):

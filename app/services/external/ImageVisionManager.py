@@ -13,7 +13,16 @@ class ImageVisionManager:
                     "content": [
                         {
                             "type": "text",
-                            "text": "Can you describe this image as concisely as possible?"
+                            "text": (
+                                """
+                                Your task is to describe an image of a provided fashion item.
+                                Please classify the type of fashion item and provide details
+                                about the color and fabric. Additionally, mention some occasions
+                                where this item could be worn. Do not suggest other fashion items 
+                                that would go well with this item. Please keep your entire 
+                                description under 50 words.
+                                """
+                            )
                         },
                         {
                             "type": "image_url",
