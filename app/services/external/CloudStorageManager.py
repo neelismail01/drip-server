@@ -1,17 +1,22 @@
 from google.cloud import storage
+from google.oauth2 import service_account
+from google import auth
 import base64
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
 
 class CloudStorageManager:
-    def __init__(self):
-      self.client = storage.Client(project="drip-382808")
+    def __init__(self, presigned_url_json):
+      _, project_id = auth.default()
+      self.client = storage.Client(project=project_id)
       self.bucket = self.client.bucket("drip-bucket-1")
+      self.presigned_url_service_account_creds = service_account.Credentials.from_service_account_info(
+        json.loads(presigned_url_json)
+      )
 
     def upload_media_to_gcs(self, image_data, destination_blob_name, content_type):
       blob = self.bucket.blob(destination_blob_name)
-      # Upload the image data to GCS
       blob.upload_from_string(image_data, content_type=content_type)
-      # Get the URL of the uploaded image
       return blob.public_url
 
     def upload_multiple_media_to_gcs(self, pictures, user_id):
@@ -26,4 +31,16 @@ class CloudStorageManager:
           print("Unsupported media format")
       return media_urls
 
-cloud_storage_manager = CloudStorageManager()
+    def get_signed_url(self, file_name, file_type):
+      try:
+        blob = self.bucket.blob(file_name)
+        signed_url = blob.generate_signed_url(
+          version='v4',
+          expiration=timedelta(hours=1),
+          method="PUT",
+          content_type=file_type,
+          credentials=self.presigned_url_service_account_creds
+        )
+        return signed_url
+      except Exception as e:
+        return None
