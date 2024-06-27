@@ -10,6 +10,14 @@ from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 outfits_blueprint = Blueprint('outfits', __name__)
 
+@outfits_blueprint.route("/", methods=["GET"])
+def get_all_outfits():
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 5))
+    all_outfits = current_app.outfits_manager.get_all_outfits(page, page_size)
+    return json.dumps(all_outfits, cls=MongoJSONEncoder)
+
+
 @outfits_blueprint.route('/<user_id>', methods=["GET"])
 def get_outfits(user_id):
     outfits = current_app.outfits_manager.get_outfits_for_user(user_id)
@@ -80,3 +88,13 @@ def delete_wishlist_outfit():
     outfit_id = outfit['_id']
     result = current_app.outfits_manager.delete_wishlist_outfit(user_id, outfit_id)
     return result, 200
+
+@outfits_blueprint.route("/liked-count/<outfit_id>", methods=["GET"])
+def get_outfit_liked_count(outfit_id):
+    liked_count = current_app.outfits_manager.get_outfit_liked_count(outfit_id)
+    return json.dumps(liked_count, cls=MongoJSONEncoder)
+
+@outfits_blueprint.route("/added-count/<outfit_id>", methods=["GET"])
+def get_outfit_added_count(outfit_id):
+    added_count = current_app.outfits_manager.get_outfit_added_count(outfit_id)
+    return json.dumps(added_count, cls=MongoJSONEncoder)

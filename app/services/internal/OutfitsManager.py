@@ -8,6 +8,23 @@ class OutfitsManager:
         self.liked_outfits_collection = self.db["liked_outfits"]
         self.wishlist_outfits_collection = self.db["wishlist_outfits"]
 
+    def get_all_outfits(self, page, page_size):
+        skip = (page - 1) * page_size
+        outfits = list(self.outfits_collection.aggregate([
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "items",
+                    "foreignField": "_id",
+                    "as": "items"
+                }
+            },
+            { "$skip": skip },
+            { "$limit": page_size }
+        ]))
+        
+        return outfits
+   
     def get_outfits_for_user(self, user_id):
         user_object_id = ObjectId(user_id)
         outfits = list(self.outfits_collection.aggregate([
@@ -112,3 +129,13 @@ class OutfitsManager:
         user_object_id = ObjectId(user_id)
         self.wishlist_outfits_collection.delete_one({ "outfit_id": outfit_object_id, "user_id": user_object_id })
         return "Sucessfully removed outfit from wishlist"
+
+    def get_outfit_liked_count(self, outfit_id):
+        outfit_object_id = ObjectId(outfit_id)
+        liked_count = self.liked_outfits_collection.count_documents({ "outfit_id": outfit_object_id })
+        return liked_count
+    
+    def get_outfit_added_count(self, outfit_id):
+        outfit_object_id = ObjectId(outfit_id)
+        added_count = self.wishlist_outfits_collection.count_documents({ "outfit_id": outfit_object_id })
+        return added_count
