@@ -51,14 +51,9 @@ def get_user_profile_pic(user_id):
 @user_blueprint.route("/profile_picture", methods=["PUT"])
 def update_profile_picture():
     data = request.json
-    user_id = data.get("user_id")
-    profile_picture = data.get("profile_picture")
-
-    image_bytes = base64.b64decode(profile_picture)
-    destination = "profile_picture_{}_{}.jpg".format(str(user_id), str(datetime.now()))
-    gcs_media_url = current_app.cloud_storage_manager.upload_media_to_gcs(image_bytes, destination, 'image/jpeg')
-    current_app.user_manager.update_profile_picture(user_id, gcs_media_url)
-    return json_util.dumps(gcs_media_url, cls=MongoJSONEncoder)
+    user_id, media_url = data.get("user_id"), data.get("media_url")
+    current_app.user_manager.update_profile_picture(user_id, media_url)
+    return json_util.dumps(media_url, cls=MongoJSONEncoder)
 
 @user_blueprint.route("/brands_following/<user_id>/<my_user_id>", methods=["GET"])
 def get_brands_following(user_id, my_user_id):

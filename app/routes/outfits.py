@@ -26,16 +26,15 @@ def get_outfits(user_id):
 @outfits_blueprint.route('/', methods=["POST"])
 def create_outfit():
     data = request.json
-    user_id, preference, items, description, caption, pictures = (
+    user_id, preference, items, description, caption, media_urls = (
         data.get("user_id"),
         data.get("preference"),
         data.get("items"),
         data.get("description"),
         data.get("caption"),
-        data.get("media")
+        data.get("mediaUrls")
     )
     description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
-    media_urls = current_app.cloud_storage_manager.upload_multiple_media_to_gcs(pictures, user_id)
     result = current_app.outfits_manager.create_outfit(
         user_id, preference, items, media_urls, description, caption, description_embedding
     )

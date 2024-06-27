@@ -16,22 +16,16 @@ def get_all_items():
 
 @items_blueprint.route("/", methods=["POST"])
 def create_item():
-    logger = current_app.logger
-    logger.info("Starting to create item in the posting process.")
     data = request.json
-    user_id, preference, caption, description, product_page_link, brand_info, pictures = (
+    user_id, preference, caption, description, product_page_link, brand_info, media_urls = (
         data.get("user_id"),
         data.get("preference"),
         data.get("caption"),
         data.get("description"),
         data.get("productPageLink"),
         data.get("brandInfo"),
-        data.get("media"),
+        data.get("mediaUrls"),
     )
-    logger.info("Extracting data from the request body in the posting process.")
-    logger.info("Starting to send media to cloud storage manager for upload.")
-    media_urls = current_app.cloud_storage_manager.upload_multiple_media_to_gcs(pictures, user_id)
-    logger.info("Finished sending media to cloud storage manager and received media URLs.")
     description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
     user_info = { "user_id": user_id, "preference": preference }
     item_info = { 
