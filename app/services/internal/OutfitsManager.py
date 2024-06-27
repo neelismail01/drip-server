@@ -62,6 +62,16 @@ class OutfitsManager:
             { "$match": {"user_id": user_object_id } },
             {
                 "$lookup": {
+                    "from": "outfits",
+                    "localField": "outfit_id",
+                    "foreignField": "_id",
+                    "as": "outfit"
+                }
+            },
+            { "$unwind": "$outfit" },
+            { "$project": { "outfit": 1, "_id": 0 } },
+            { "$replaceRoot": { "newRoot": "$outfit" } },
+            { "$lookup": {
                     "from": "items",
                     "localField": "items",
                     "foreignField": "_id",
