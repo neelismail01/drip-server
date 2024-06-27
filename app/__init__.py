@@ -75,6 +75,6 @@ def create_app():
     app.register_blueprint(search_blueprint, url_prefix="/search")
     app.register_blueprint(social_blueprint, url_prefix="/social")
     app.register_blueprint(user_blueprint, url_prefix="/user")
-    app.register_blueprint(feed_blueprint, url_prefix="/feed", logger=logger)
+    app.register_blueprint(feed_blueprint, url_prefix="/feed")
 
     return app
