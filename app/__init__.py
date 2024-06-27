@@ -8,6 +8,7 @@ from app.services.internal.OutfitsManager import OutfitsManager
 from app.services.internal.SearchManager import SearchManager
 from app.services.internal.SocialNetworkManager import SocialNetworkManager
 from app.services.internal.UserManager import UserManager
+from app.services.internal.FeedManager import FeedManager
 
 from app.services.external.BrandSearchManager import BrandSearchManager
 from app.services.external.CloudStorageManager import CloudStorageManager
@@ -26,6 +27,7 @@ from app.routes.outfits import outfits_blueprint
 from app.routes.search import search_blueprint
 from app.routes.social import social_blueprint
 from app.routes.user import user_blueprint
+from app.routes.feed import feed_blueprint
 
 def create_app():
     # Initialize app
@@ -53,6 +55,7 @@ def create_app():
     app.search_manager = SearchManager(app.mongo)
     app.social_network_manager = SocialNetworkManager(app.mongo)
     app.user_manager = UserManager(app.mongo)
+    app.feed_manager = FeedManager(app.mongo)
 
     # Initialize 3rd party service managers
     app.brand_search_manager = BrandSearchManager(BRAND_SEARCH_API_KEY)
@@ -72,5 +75,6 @@ def create_app():
     app.register_blueprint(search_blueprint, url_prefix="/search")
     app.register_blueprint(social_blueprint, url_prefix="/social")
     app.register_blueprint(user_blueprint, url_prefix="/user")
+    app.register_blueprint(feed_blueprint, url_prefix="/feed", logger=logger)
 
     return app
