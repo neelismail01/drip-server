@@ -11,17 +11,15 @@ class FeedManager:
         self.liked_outfits_collection = self.db["liked_outfits"]
         self.wishlist_outfits_collection = self.db["wishlist_outfits"]
 
-    def get_all_items(self, filter={}, skip=0, limit=0):
+    def get_all_items(self, filter={}):
         items = list(self.items_collection.aggregate([
-            { "$match": filter },
-            { "$skip": skip },
-            { "$limit": limit }
+            { "$match": filter }
         ]))
         for item in items:
             item["productType"] = "item"
         return items
 
-    def get_all_outfits(self, filter={}, skip=0, limit=0):
+    def get_all_outfits(self, filter={}):
         outfits = list(self.outfits_collection.aggregate([
             { "$match": filter },
             {
@@ -31,9 +29,7 @@ class FeedManager:
                     "foreignField": "_id",
                     "as": "items"
                 }
-            },
-            { "$skip": skip },
-            { "$limit": limit }
+            }
         ]))
         for outfit in outfits:
             outfit["productType"] = "outfit"
@@ -43,13 +39,13 @@ class FeedManager:
         following = list(self.social_graph_collection.find({"follower_id": ObjectId(user_id)}))
         return [str(user["followee_id"]) for user in following]
 
-    def get_items_by_users(self, user_ids, skip=0, limit=0):
+    def get_items_by_users(self, user_ids):
         filter = {"user_id": {"$in": user_ids}}
-        return self.get_all_items(filter, skip, limit)
+        return self.get_all_items(filter)
 
-    def get_outfits_by_users(self, user_ids, skip=0, limit=0):
+    def get_outfits_by_users(self, user_ids):
         filter = {"user_id": {"$in": user_ids}}
-        return self.get_all_outfits(filter, skip, limit)
+        return self.get_all_outfits(filter)
 
     def get_liked_or_wishlist_items_by_users(self, user_ids, collection):
         liked_items = list(collection.find({"user_id": {"$in": user_ids}}))
@@ -66,8 +62,8 @@ class FeedManager:
         
         following = self.get_user_following(user_id)
         
-        items_by_following = self.get_items_by_users(following, skip, page_size)
-        outfits_by_following = self.get_outfits_by_users(following, skip, page_size)
+        items_by_following = self.get_items_by_users(following)
+        outfits_by_following = self.get_outfits_by_users(following)
         
         liked_items_by_following = self.get_liked_or_wishlist_items_by_users(following, self.liked_items_collection)
         wishlist_items_by_following = self.get_liked_or_wishlist_items_by_users(following, self.wishlist_items_collection)
@@ -75,8 +71,8 @@ class FeedManager:
         liked_outfits_by_following = self.get_liked_or_wishlist_outfits_by_users(following, self.liked_outfits_collection)
         wishlist_outfits_by_following = self.get_liked_or_wishlist_outfits_by_users(following, self.wishlist_outfits_collection)
         
-        remaining_items = self.get_all_items({}, skip, page_size)
-        remaining_outfits = self.get_all_outfits({}, skip, page_size)
+        remaining_items = self.get_all_items()
+        remaining_outfits = self.get_all_outfits()
         
         combined_products = items_by_following + outfits_by_following + \
                             liked_items_by_following + wishlist_items_by_following + \
