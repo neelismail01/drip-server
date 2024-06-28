@@ -9,29 +9,28 @@ from app.utils.MongoJsonEncoder import MongoJSONEncoder
 social_blueprint = Blueprint('social', __name__)
 
 @social_blueprint.route('/follow', methods=["POST"])
-def follow_user():
+def follow_account():
     data = request.json
     follower_info = { 
         "id": data.get("follower_id"), 
         "name": data.get("follower_name"), 
         "username": data.get("follower_username"),
-        "profilePicture": data.get("follower_profile_picture")
+        "account_type": data.get("follower_account_type")
     }
     followee_info = { 
         "id": data.get("followee_id"), 
         "name": data.get("followee_name"), 
         "username": data.get("followee_username"),
-        "profilePicture": data.get("followee_profile_picture")
+        "account_type": data.get("followee_account_type")
     }
-    result = current_app.social_network_manager.follow_user(follower_info, followee_info)
+    result = current_app.social_network_manager.follow_account(follower_info, followee_info)
     return result, 200
 
 @social_blueprint.route('/unfollow', methods=["POST"])
-def unfollow_user():
+def unfollow_account():
     data = request.json
-    follower_id = data.get("follower_id")
-    followee_id = data.get("followee_id")
-    result = current_app.social_network_manager.unfollow_user(follower_id, followee_id)
+    follower_id, followee_id = data.get("user_id_1"), data.get("user_id_2")
+    result = current_app.social_network_manager.unfollow_account(follower_id, followee_id)
     return result, 200
 
 @social_blueprint.route('/', methods=["GET"])
@@ -40,33 +39,30 @@ def check_following_relationship():
     followee_id = request.args.get("followee_id")
     result = current_app.social_network_manager.get_following_relationship(follower_id, followee_id)
     return json_util.dumps(result, cls=MongoJSONEncoder)
-    
-@social_blueprint.route('/stats/<user_id>', methods=["GET"])
-def get_follower_following_stats(user_id):
-    all_followers = current_app.social_network_manager.get_all_followers(user_id)
-    all_following = current_app.social_network_manager.get_all_following(user_id)
-    following_dict = { follow["followee_id"]: follow for follow in all_following }
 
-    following_list = [
-        {
-            "id": str(follow["followee_id"]),
-            "name": follow["followee_name"],
-            "username": follow["followee_username"],
-            "profilePicture": follow["followee_profilePicture"],
-            "is_following": True
-        }
-        for follow in all_following
-    ]
+@social_blueprint.route('/followers/<user_id>/count', methods=["GET"])
+def get_followers_count(user_id):
+    followers_count = current_app.social_network_manager.get_follower_count(user_id)
+    return json_util.dumps(followers_count, cls=MongoJSONEncoder)
 
-    followers_list = [
-        {
-            "id": str(follow["follower_id"]),
-            "name": follow["follower_name"],
-            "username": follow["follower_username"],
-            "profilePicture": follow["follower_profilePicture"],
-            "is_following": follow["follower_id"] in following_dict
-        }
-        for follow in all_followers
-    ]
+@social_blueprint.route('/following/<user_id>/count', methods=["GET"])
+def get_following_count(user_id):
+    following_count = current_app.social_network_manager.get_following_count(user_id)
+    return json_util.dumps(following_count, cls=MongoJSONEncoder)
+
+@social_blueprint.route('/followers/<user_id>', methods=["GET"])
+def get_followers(user_id):
+    followers = current_app.social_network_manager.get_all_followers(user_id)
+    return json_util.dumps(followers, cls=MongoJSONEncoder)
+
+@social_blueprint.route('/following/<user_id>', methods=["GET"])
+def get_following(user_id):
+    following = current_app.social_network_manager.get_all_following(user_id)
+    return json_util.dumps(following, cls=MongoJSONEncoder)
     
-    return json_util.dumps({ "following": following_list, "followers": followers_list }, cls=MongoJSONEncoder)
+@social_blueprint.route('/followers/mutual', methods=["POST"])
+def get_mutal_followers():
+    data = request.json
+    user_id, visited_account_id = data.get("userId"), data.get("visitedAccountId")
+    mutual_followers = current_app.social_network_manager.get_mutual_followers(user_id, visited_account_id)
+    return json_util.dumps(mutual_followers, cls=MongoJSONEncoder)

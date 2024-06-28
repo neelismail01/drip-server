@@ -9,30 +9,27 @@ class ItemsManager:
         self.liked_items_collection = self.db["liked_items"]
         self.wishlist_items_collection = self.db["wishlist_items"]
         self.brands_collection = self.db['brands']
+        self.social_collection = self.db["social_graph"]
 
     def get_all_items(self):
         items = list(self.items_collection.find({}))
         return items
 
-    def insert_new_brand(self, user_id, brand_info):
+    def insert_new_brand(self, brand_info):
         existing_brand = self.brands_collection.find_one({'brand_name': brand_info["name"]})
-        if existing_brand:
-            if user_id not in existing_brand['followers']:
-                self.brands_collection.update_one(
-                    {'_id': existing_brand['_id']},
-                    {'$push': {'followers': user_id}}
-                )
-        else:
+        if not existing_brand:
+            current_time = datetime.utcnow()
             self.brands_collection.insert_one({
-                'brand_name': brand_info["name"],
+                'date_created': current_time,
+                'name': brand_info["name"],
+                'username': None,
                 'domain': brand_info["domain"],
-                'profile_pic': brand_info["icon"],
-                'followers': [user_id]
+                'profile_picture': brand_info["icon"],
             })
 
     def create_item(self, user_info, item_info, brand_info):
         user_object_id = ObjectId(user_info["user_id"])
-        self.insert_new_brand(user_object_id, brand_info)
+        self.insert_new_brand(brand_info)
         current_time = datetime.utcnow()
         result = self.items_collection.insert_one({
             "user_id": user_object_id,
