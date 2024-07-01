@@ -15,21 +15,51 @@ class ItemsManager:
         items = list(self.items_collection.find({}))
         return items
 
-    def insert_new_brand(self, brand_info):
-        existing_brand = self.brands_collection.find_one({'brand_name': brand_info["name"]})
+    def insert_new_brand(self, brand_info, user_id):
+        user = self.users_collection.find_one({'_id': user_id})
+        existing_brand = self.brands_collection.find_one({'name': brand_info["name"]})
+        current_time = datetime.utcnow()
         if not existing_brand:
-            current_time = datetime.utcnow()
-            self.brands_collection.insert_one({
+            new_brand = self.brands_collection.insert_one({
                 'date_created': current_time,
                 'name': brand_info["name"],
-                'username': None,
                 'domain': brand_info["domain"],
                 'profile_picture': brand_info["icon"],
             })
+            self.social_collection.insert_one({
+                "follower_id": user['_id'],
+                "follower_name": user["name"],
+                "follower_username": user["username"],
+                "follower_account_type": "user",
+                "followee_id": new_brand.inserted_id,
+                "followee_name": brand_info["name"],
+                "followee_username": brand_info["domain"],
+                "followee_account_type": "brand",
+                "status": "SUCCESSFUL",
+                "date_created": current_time
+            })
+        else:
+            follow_exists = self.social_collection.find_one({
+                "follower_id": user['_id'],
+                "followee_id": existing_brand['_id']
+            })
+            if not follow_exists:
+                self.social_collection.insert_one({
+                    "follower_id": user['_id'],
+                    "follower_name": user["name"],
+                    "follower_username": user["username"],
+                    "follower_account_type": "user",
+                    "followee_id": existing_brand['_id'],
+                    "followee_name": existing_brand["name"],
+                    "followee_username": existing_brand["domain"],
+                    "followee_account_type": "brand",
+                    "status": "SUCCESSFUL",
+                    "date_created": current_time
+                })
 
     def create_item(self, user_info, item_info, brand_info):
         user_object_id = ObjectId(user_info["user_id"])
-        self.insert_new_brand(brand_info)
+        self.insert_new_brand(brand_info, user_object_id)
         current_time = datetime.utcnow()
         result = self.items_collection.insert_one({
             "user_id": user_object_id,

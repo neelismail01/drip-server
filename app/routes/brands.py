@@ -26,57 +26,30 @@ def all_brands():
     collection = db['brands']
     if request.method == "GET":
         brands = list(collection.find().sort('purchaseCount', -1))
-        json_brands = dumps(brands)
-        return json_brands, 201
+        return json.dumps(brands, cls=MongoJSONEncoder), 200
     
-@brands_blueprint.route('/<brand_name>/<my_user_id>', methods=["GET"])
-def brand(brand_name, my_user_id):
+@brands_blueprint.route('/<brand_name>', methods=["GET"])
+def brand(brand_name):
     db = current_app.mongo.drip
     brands_collection = db['brands']
     users_collection = db['users']
     social_graph_collection = db['social_graph']
 
     if request.method == "GET":
-        brand = brands_collection.find_one({'brand_name': brand_name})
+        brand = brands_collection.find_one({'name': brand_name})
         if not brand:
             return {}, 200
-            
-        brand['_id'] = str(brand['_id'])
-        follower_ids = brand['followers']
-        follower_object_ids = [ObjectId(follower_id) for follower_id in follower_ids]
-        users = []
-        for user_id in follower_object_ids:
-            user = users_collection.find_one({'_id': user_id})
-            if user:
-                is_following = social_graph_collection.find_one({
-                    "follower_id": my_user_id,
-                    "followee_id": str(user_id),
-                    "status": "SUCCESSFUL"
-                }) is not None
-
-                user_data = {
-                    'id': str(user_id),
-                    'name': user.get('name', ''),
-                    'email': user.get('email', ''),
-                    'username': user.get('username', ''),
-                    'profile_pic': user.get('profile_picture', ''),
-                    "is_following": is_following
-                }
-                users.append(user_data)
-        brand['followers'] = users
-        return jsonify(brand), 200
+        return json.dumps(brand, cls=MongoJSONEncoder), 200
     
 @brands_blueprint.route('/outfit_brands', methods=["GET"])
 def outfit_brands():
     db = current_app.mongo.drip
     collection = db['brands']
     if request.method == "GET":
-        brand_names = request.args.getlist("brand_names[]")
-        decoded_brand_names = [unquote(name) for name in brand_names]
-        query = {"brand_name": {"$in": decoded_brand_names}}
+        brand_names_param = request.args.get("brand_names", "")
+        decoded_brand_names = [unquote(name) for name in brand_names_param.split(",")]
+        query = {"name": {"$in": decoded_brand_names}}
         brands = list(collection.find(query))
-        for brand in brands:
-            brand['_id'] = str(brand['_id'])
         return json.dumps(brands, cls=MongoJSONEncoder), 200
 
 @brands_blueprint.route('/items/<brand_name>', methods=["GET"])
