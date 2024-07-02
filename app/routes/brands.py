@@ -57,7 +57,7 @@ def brand_items(brand_name):
     db = current_app.mongo.drip
     brands_collection = db['brands']
     items_collection = db['items']
-    brand = brands_collection.find_one({'brand_name': brand_name})
+    brand = brands_collection.find_one({'name': brand_name})
     if brand:
         items = list(items_collection.find({"brand": brand_name}))
         for item in items:
@@ -72,7 +72,7 @@ def brand_closet(brand_name):
     brands_collection = db['brands']
     items_collection = db['items']
 
-    brand = brands_collection.find_one({'brand_name': brand_name})
+    brand = brands_collection.find_one({'name': brand_name})
     if not brand:
         return "Brand not found", 404
     
@@ -87,7 +87,7 @@ def brand_outfits(brand_name):
     outfits_collection = db['outfits']
     items_collection = db['items']
 
-    brand = brands_collection.find_one({'brand_name': brand_name})
+    brand = brands_collection.find_one({'name': brand_name})
     if not brand:
         return "Brand not found", 404
 
@@ -120,13 +120,13 @@ def liked_count(brand_name):
     items_collection = db['items']
     liked_items_collection = db['liked_items']
 
-    brand = brands_collection.find_one({'brand_name': brand_name})
+    brand = brands_collection.find_one({'name': brand_name})
     if not brand:
         return "Brand not found", 404
 
     items = list(items_collection.find({"brand": brand_name}))
     item_ids = [item['_id'] for item in items]
-    liked_count = liked_items_collection.count_documents({'item_id': {'$in': item_ids}})
+    liked_count = liked_items_collection.count_documents({'post_id': {'$in': item_ids}})
     
     return jsonify({'liked_count': liked_count}), 200
 
@@ -137,7 +137,7 @@ def liked_items(brand_name):
     items_collection = db['items']
     liked_items_collection = db['liked_items']
 
-    brand = brands_collection.find_one({'brand_name': brand_name})
+    brand = brands_collection.find_one({'name': brand_name})
     if not brand:
         return "Brand not found", 404
 
@@ -146,8 +146,8 @@ def liked_items(brand_name):
 
     # Count likes for each item
     liked_items_cursor = liked_items_collection.aggregate([
-        {'$match': {'item_id': {'$in': item_ids}}},
-        {'$group': {'_id': '$item_id', 'count': {'$sum': 1}}},
+        {'$match': {'post_id': {'$in': item_ids}}},
+        {'$group': {'_id': '$post_id', 'count': {'$sum': 1}}},
         {'$sort': {'count': -1}}
     ])
 
