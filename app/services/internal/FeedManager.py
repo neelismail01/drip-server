@@ -47,14 +47,24 @@ class FeedManager:
         filter = {"user_id": {"$in": user_ids}}
         return self.get_all_outfits(filter)
 
-    def get_liked_or_wishlist_items_by_users(self, user_ids, collection):
-        liked_items = list(collection.find({"user_id": {"$in": user_ids}}))
-        item_ids = [item["item_id"] for item in liked_items]
+    def get_liked_items_by_users(self, user_ids, collection):
+        liked_items = list(collection.find({"liked_by": {"$in": user_ids}}))
+        item_ids = [item["post_id"] for item in liked_items]
         return list(self.items_collection.find({"_id": {"$in": item_ids}}))
 
-    def get_liked_or_wishlist_outfits_by_users(self, user_ids, collection):
-        liked_outfits = list(collection.find({"user_id": {"$in": user_ids}}))
-        outfit_ids = [outfit["outfit_id"] for outfit in liked_outfits]
+    def get_wishlist_items_by_users(self, user_ids, collection):
+        added_items = list(collection.find({"added_by": {"$in": user_ids}}))
+        item_ids = [item["post_id"] for item in added_items]
+        return list(self.items_collection.find({"_id": {"$in": item_ids}}))
+
+    def get_liked_outfits_by_users(self, user_ids, collection):
+        liked_outfits = list(collection.find({"liked_by": {"$in": user_ids}}))
+        outfit_ids = [outfit["post_id"] for outfit in liked_outfits]
+        return list(self.outfits_collection.find({"_id": {"$in": outfit_ids}}))
+
+    def get_wishlist_outfits_by_users(self, user_ids, collection):
+        added_outfits = list(collection.find({"added_by": {"$in": user_ids}}))
+        outfit_ids = [outfit["post_id"] for outfit in added_outfits]
         return list(self.outfits_collection.find({"_id": {"$in": outfit_ids}}))
 
     def get_all_products(self, user_id, page, page_size):
@@ -65,11 +75,11 @@ class FeedManager:
         items_by_following = self.get_items_by_users(following)
         outfits_by_following = self.get_outfits_by_users(following)
         
-        liked_items_by_following = self.get_liked_or_wishlist_items_by_users(following, self.liked_items_collection)
-        wishlist_items_by_following = self.get_liked_or_wishlist_items_by_users(following, self.wishlist_items_collection)
+        liked_items_by_following = self.get_liked_items_by_users(following, self.liked_items_collection)
+        wishlist_items_by_following = self.get_wishlist_items_by_users(following, self.wishlist_items_collection)
         
-        liked_outfits_by_following = self.get_liked_or_wishlist_outfits_by_users(following, self.liked_outfits_collection)
-        wishlist_outfits_by_following = self.get_liked_or_wishlist_outfits_by_users(following, self.wishlist_outfits_collection)
+        liked_outfits_by_following = self.get_liked_outfits_by_users(following, self.liked_items_collection)
+        wishlist_outfits_by_following = self.get_wishlist_outfits_by_users(following, self.wishlist_items_collection)
         
         remaining_items = self.get_all_items()
         remaining_outfits = self.get_all_outfits()
