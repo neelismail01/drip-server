@@ -29,7 +29,7 @@ def follow_account():
 @social_blueprint.route('/unfollow', methods=["POST"])
 def unfollow_account():
     data = request.json
-    follower_id, followee_id = data.get("user_id_1"), data.get("user_id_2")
+    follower_id, followee_id = data.get("follower_id"), data.get("followee_id")
     result = current_app.social_network_manager.unfollow_account(follower_id, followee_id)
     return result, 200
 
@@ -59,6 +59,7 @@ def get_followers(user_id):
 def get_following(user_id):
     following = current_app.social_network_manager.get_all_following(user_id)
     return json_util.dumps(following, cls=MongoJSONEncoder)
+
     
 @social_blueprint.route('/followers/mutual', methods=["POST"])
 def get_mutal_followers():

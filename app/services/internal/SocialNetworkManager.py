@@ -48,13 +48,93 @@ class SocialNetworkManager:
 
     def get_all_followers(self, user_id):
         user_object_id = ObjectId(user_id)
-        followers = list(self.social_collection.find({ "followee_id": user_object_id, "status": "SUCCESSFUL" }))
-        return followers
+
+        pipeline = [
+            {
+                "$match": {
+                    "followee_id": user_object_id,
+                    "status": "SUCCESSFUL"
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "users", 
+                    "localField": "follower_id", 
+                    "foreignField": "_id", 
+                    "as": "follower_info"
+                }
+            },
+            {
+                "$addFields": {
+                    "follower_info": {"$arrayElemAt": ["$follower_info", 0]}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "id": {"$toString": "$follower_id"},
+                    "name": "$follower_info.name",
+                    "profile_picture": "$follower_info.profile_picture",
+                    "username": "$follower_info.username",
+                    "account_type": "$follower_account_type"
+                }
+            }
+        ]
+
+        follower_info = list(self.social_collection.aggregate(pipeline))
+        return follower_info
 
     def get_all_following(self, user_id):
         user_object_id = ObjectId(user_id)
-        followings = list(self.social_collection.find({ "follower_id": user_object_id, "status": "SUCCESSFUL" }))
-        return followings
+
+        pipeline = [
+            {
+                "$match": {
+                    "follower_id": user_object_id,
+                    "status": "SUCCESSFUL"
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "brands", 
+                    "localField": "followee_id", 
+                    "foreignField": "_id", 
+                    "as": "brand_info"
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "users", 
+                    "localField": "followee_id", 
+                    "foreignField": "_id", 
+                    "as": "user_info"
+                }
+            },
+            {
+                "$addFields": {
+                    "followee_info": {
+                        "$cond": {
+                            "if": {"$eq": ["$followee_account_type", "brand"]},
+                            "then": {"$arrayElemAt": ["$brand_info", 0]},
+                            "else": {"$arrayElemAt": ["$user_info", 0]}
+                        }
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "id": {"$toString": "$followee_id"},
+                    "name": "$followee_name",
+                    "profile_picture": "$followee_info.profile_picture",
+                    "username": "$followee_username",
+                    "account_type": "$followee_account_type"
+                }
+            }
+        ]
+
+        followee_info = list(self.social_collection.aggregate(pipeline))
+        return followee_info
 
     def get_mutual_followers(self, user_id, visited_account_id):
         user_object_id = ObjectId(user_id)

@@ -52,20 +52,6 @@ def outfit_brands():
         brands = list(collection.find(query))
         return json.dumps(brands, cls=MongoJSONEncoder), 200
 
-@brands_blueprint.route('/items/<brand_name>', methods=["GET"])
-def brand_items(brand_name):
-    db = current_app.mongo.drip
-    brands_collection = db['brands']
-    items_collection = db['items']
-    brand = brands_collection.find_one({'name': brand_name})
-    if brand:
-        items = list(items_collection.find({"brand": brand_name}))
-        for item in items:
-            item['_id'] = str(item['_id'])
-        return jsonify(items), 200
-    else:
-        return "Brand not found", 404
-
 @brands_blueprint.route('/closet/<brand_name>', methods=["GET"])
 def brand_closet(brand_name):
     db = current_app.mongo.drip
