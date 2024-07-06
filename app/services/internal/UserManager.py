@@ -6,6 +6,8 @@ class UserManager:
     def __init__(self, mongo_client):
         self.db = mongo_client["drip"]
         self.users_collection = self.db["users"]
+        self.items_collection = self.db["items"]
+        self.brands_collection = self.db["brands"]
 
     def get_user_by_email(self, email):
         user = self.users_collection.find_one({ "email": email })
@@ -58,3 +60,22 @@ class UserManager:
             { "_id": user_object_id },
             { "$set": { "profile_picture": profile_picture } }
         )
+
+    def get_most_shopped_brands(self, user_id):
+        pipeline = [
+            {"$match": {"user_id": ObjectId(user_id)}},
+            {"$group": {"_id": "$brand", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 5}
+        ]
+
+        most_shopped_brands = list(self.items_collection.aggregate(pipeline))
+
+        top_brands = []
+        for brand in most_shopped_brands:
+            full_brand = self.brands_collection.find_one({"name": brand['_id']})
+            full_brand['count'] = brand['count']
+            full_brand['_id'] = str(full_brand['_id'])
+            top_brands.append(full_brand)
+
+        return top_brands

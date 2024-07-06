@@ -52,6 +52,11 @@ def update_profile_picture():
     current_app.user_manager.update_profile_picture(user_id, media_url)
     return json_util.dumps(media_url, cls=MongoJSONEncoder)
 
+@user_blueprint.route("/top_brands/<user_id>", methods=["GET"])
+def get_most_shopped_brands(user_id):
+    top_brands = current_app.user_manager.get_most_shopped_brands(user_id)
+    return json_util.dumps(top_brands, cls=MongoJSONEncoder)
+
 @user_blueprint.route("/brands_following/<user_id>/<my_user_id>", methods=["GET"])
 def get_brands_following(user_id, my_user_id):
     db = current_app.mongo.drip

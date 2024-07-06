@@ -170,5 +170,8 @@ class SocialNetworkManager:
                 'profile_picture': '$user_details.profile_picture'
             }}
         ]))
+
+        for follower in mutual_followers:
+            follower['_id'] = str(follower['_id'])
         
         return mutual_followers
