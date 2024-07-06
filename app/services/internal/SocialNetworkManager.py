@@ -166,6 +166,8 @@ class SocialNetworkManager:
             {'$project': {
                 '_id': 1,
                 'username': '$user_details.username',
+                'name': '$user_details.name',
+                'profile_picture': '$user_details.profile_picture'
             }}
         ]))
         
