@@ -41,16 +41,62 @@ def brand(brand_name):
             return {}, 200
         return json.dumps(brand, cls=MongoJSONEncoder), 200
     
-@brands_blueprint.route('/outfit_brands', methods=["GET"])
-def outfit_brands():
+@brands_blueprint.route('/outfit_brands/<user_id>', methods=["GET"])
+def outfit_brands(user_id):
     db = current_app.mongo.drip
     collection = db['brands']
+    social_collection = db['social_graph']
     if request.method == "GET":
         brand_names_param = request.args.get("brand_names", "")
         decoded_brand_names = [unquote(name) for name in brand_names_param.split(",")]
         query = {"name": {"$in": decoded_brand_names}}
         brands = list(collection.find(query))
-        return json.dumps(brands, cls=MongoJSONEncoder), 200
+        user_object_id = ObjectId(user_id)
+        mutuals_set = set()
+        follower_count = 0
+        for brand in brands:
+            count = social_collection.count_documents({ "followee_id": brand['_id'], "status": "SUCCESSFUL" })
+            brand['followerCount'] = count
+            follower_count = follower_count + count
+            mutual_followers = list(social_collection.aggregate([
+                # Match documents where the followee is either user1 or user2
+                {'$match': {
+                    'followee_id': {'$in': [user_object_id, brand['_id']]}
+                }},
+                # Group by follower_id and count the number of documents
+                {'$group': {
+                    '_id': '$follower_id',
+                    'count': {'$sum': 1}
+                }},
+                # Filter to keep only followers who follow both users
+                {'$match': {
+                    'count': 2
+                }},
+                # Look up the user details from the users collection
+                {'$lookup': {
+                    'from': 'users',
+                    'localField': '_id',
+                    'foreignField': '_id',
+                    'as': 'user_details'
+                }},
+                # Unwind the user_details array
+                {'$unwind': '$user_details'},
+                # Project only the fields we want
+                {'$project': {
+                    '_id': 1,
+                    'username': '$user_details.username',
+                    'name': '$user_details.name',
+                    'profile_picture': '$user_details.profile_picture'
+                }}
+            ]))
+            for follower in mutual_followers:
+                follower['_id'] = str(follower['_id'])
+                mutuals_set.add(frozenset(follower.items()))
+            brand['mutualFollowers'] = mutual_followers
+
+        mutuals_list = [dict(follower) for follower in mutuals_set]
+
+        return json.dumps({'brands': brands, 'mutual_followers': mutuals_list, 'follower_count': follower_count}, cls=MongoJSONEncoder), 200
 
 @brands_blueprint.route('/closet/<brand_name>', methods=["GET"])
 def brand_closet(brand_name):
@@ -145,3 +191,41 @@ def liked_items(brand_name):
             sorted_liked_items.append(item)
 
     return json.dumps(sorted_liked_items, cls=MongoJSONEncoder), 200
+
+@brands_blueprint.route('/top_shoppers/<brand_name>', methods=["GET"])
+def get_top_shoppers(brand_name):
+    db = current_app.mongo.drip
+    brands_collection = db['brands']
+    items_collection = db['items']
+    users_collection = db['users']
+
+    # Find the brand document
+    brand = brands_collection.find_one({'name': brand_name})
+    if not brand:
+        return "Brand not found", 404
+
+    # Find items belonging to the brand
+    items = list(items_collection.find({"brand": brand_name}))
+
+    # Count item ownership per user
+    user_items_count = {}
+    for item in items:
+        user_id = item['user_id']
+        if user_id in user_items_count:
+            user_items_count[user_id] += 1
+        else:
+            user_items_count[user_id] = 1
+
+    # Sort users by the number of items owned from this brand (descending)
+    sorted_users = sorted(user_items_count.items(), key=lambda x: x[1], reverse=True)
+
+    # Fetch user details for the top 5 users (or less if fewer users own the brand)
+    top_shoppers = []
+    for user_id, item_count in sorted_users[:5]:
+        user = users_collection.find_one({'_id': user_id})
+        if user:
+            user['_id'] = str(user['_id'])  # Convert ObjectId to string for JSON serialization
+            user['item_count'] = item_count
+            top_shoppers.append(user)
+
+    return json.dumps(top_shoppers, cls=MongoJSONEncoder), 200
