@@ -14,6 +14,7 @@ class UserManager:
     def get_user_by_id(self, user_id):
         user_object_id = ObjectId(user_id)
         user = self.users_collection.find_one({ "_id": user_object_id })
+        user['_id'] = str(user['_id'])
         return user
 
     def create_user(self, email, name):
