@@ -97,3 +97,10 @@ def get_outfit_liked_count(outfit_id):
 def get_outfit_added_count(outfit_id):
     added_count = current_app.outfits_manager.get_outfit_added_count(outfit_id)
     return json.dumps(added_count, cls=MongoJSONEncoder)
+
+@outfits_blueprint.route("/image/analyze", methods=["POST"])
+def analyze_outfit_image():
+    data = request.json
+    base64_image = data.get("base64_image")
+    outfit_details = current_app.image_vision_manager.get_details_from_outfit_image(base64_image)
+    return json.dumps(outfit_details, cls=MongoJSONEncoder)

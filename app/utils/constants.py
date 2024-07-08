@@ -55,3 +55,30 @@ ASSISTANT_OUTFIT_ITEM_EXTRACTION_PROMPT = (
     }
     """
 )
+
+# Image Vision Prompt
+ITEM_IMAGE_VISION_PROMPT = (
+    """
+    Describe the provided fashion item in detail focusing on the aspects outlined below. The description
+    must be constrained to a 50-word limit:
+
+    Color: Provide a vivid and descriptive explanation of the color, including any notable patterns or variations.
+
+    Fabric: Describe the fabric in detail, including its texture, quality, and any unique characteristics.
+
+    Occasions: Provide insights into suitable occasions for wearing this item. This may include events or seasons.
+    """
+)
+
+OUTFIT_IMAGE_VISION_PROMPT = (
+    """
+    Describe the provided fashion outfit in detail focusing on the aspects outlined below. The description
+    must be constrained to a 50-word limit:
+
+    Items: Provide a vivid and descriptive explanation of the items in this outfit. Please focus on the colours
+    and fabrics of all visible items and how they complement each other. Identify all visible tops, bottom, 
+    shoes, and accessories.
+
+    Occasions: Provide insights into suitable occasions for wearing this outfit.
+    """
+)
