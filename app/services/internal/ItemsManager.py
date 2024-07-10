@@ -186,3 +186,9 @@ class ItemsManager:
         item_object_id = ObjectId(item_id)
         added_count = self.wishlist_items_collection.count_documents({ "post_id": item_object_id })
         return added_count
+        
+    def check_item_owned(self, user_id, item_id):
+        user_object_id = ObjectId(user_id)
+        item_object_id = ObjectId(item_id)
+        item = self.items_collection.find_one({"_id": item_object_id, "user_id": user_object_id})
+        return item is not None
