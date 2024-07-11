@@ -76,7 +76,7 @@ class ItemsManager:
 
     def get_user_items(self, user_id):
         user_object_id = ObjectId(user_id)
-        user_items = list(self.items_collection.find({'user_id': user_object_id}))
+        user_items = list(self.items_collection.find({'user_id': user_object_id}).sort("date_created", -1))
         return user_items
 
     def get_liked_items(self, user_id):
@@ -93,7 +93,8 @@ class ItemsManager:
             },
             { "$unwind": "$item" },
             { "$project": { "item": 1, "_id": 0 } },
-            { "$replaceRoot": { "newRoot": "$item" } }
+            { "$replaceRoot": { "newRoot": "$item" } },
+            { "$sort": { "date_created": -1 } }
         ]))
         return liked_items
 
@@ -142,7 +143,8 @@ class ItemsManager:
             },
             { "$unwind": "$item" },
             { "$project": { "item": 1, "_id": 0 } },
-            { "$replaceRoot": { "newRoot": "$item" } }
+            { "$replaceRoot": { "newRoot": "$item" } },
+            { "$sort": { "date_created": -1 } }
         ]))
         return wishlist_items
 
@@ -192,3 +194,8 @@ class ItemsManager:
         item_object_id = ObjectId(item_id)
         item = self.items_collection.find_one({"_id": item_object_id, "user_id": user_object_id})
         return item is not None
+
+    def get_user_liked_count(self, user_id):
+        user_object_id = ObjectId(user_id)
+        liked_count = self.liked_items_collection.count_documents({ "posted_by": user_object_id })
+        return liked_count

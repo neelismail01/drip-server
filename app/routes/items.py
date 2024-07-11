@@ -124,3 +124,8 @@ def check_item_owned():
     item_id = request.args.get("item_id")
     owned = current_app.items_manager.check_item_owned(user_id, item_id)
     return json.dumps({"owned": owned}), 200
+
+@items_blueprint.route("/liked-count/<user_id>", methods=["GET"])
+def get_user_liked_count(user_id):
+    liked_count = current_app.items_manager.get_user_liked_count(user_id)
+    return json.dumps(liked_count, cls=MongoJSONEncoder)
