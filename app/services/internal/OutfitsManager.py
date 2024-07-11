@@ -19,12 +19,12 @@ class OutfitsManager:
                     "as": "items"
                 }
             },
+            { "$sort": { "date_created": -1 } },
             { "$skip": skip },
             { "$limit": page_size }
         ]))
-        
         return outfits
-   
+
     def get_outfits_for_user(self, user_id):
         user_object_id = ObjectId(user_id)
         outfits = list(self.outfits_collection.aggregate([
@@ -36,7 +36,8 @@ class OutfitsManager:
                     "foreignField": "_id",
                     "as": "items"
                 }
-            }
+            },
+            { "$sort": { "date_created": -1 } }
         ]))
         return outfits
 
@@ -78,11 +79,12 @@ class OutfitsManager:
                     "foreignField": "_id",
                     "as": "items"
                 }
-            }
+            },
+            { "$sort": { "date_created": -1 } }
         ]))
         return liked_outfits
 
-    def created_liked_outfit(self, user_id, outfit_id):
+    def create_liked_outfit(self, user_id, outfit_id):
         outfit_object_id = ObjectId(outfit_id)
         user_object_id = ObjectId(user_id)
         current_time = datetime.utcnow()
@@ -135,7 +137,8 @@ class OutfitsManager:
                     "foreignField": "_id",
                     "as": "items"
                 }
-            }
+            },
+            { "$sort": { "date_created": -1 } }
         ]))
         return wishlist_outfits
 
