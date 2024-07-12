@@ -23,6 +23,11 @@ def get_outfits(user_id):
     outfits = current_app.outfits_manager.get_outfits_for_user(user_id)
     return json.dumps(outfits, cls=MongoJSONEncoder)
 
+@outfits_blueprint.route("/<item_id>", methods=["GET"])
+def get_outfits_by_item(item_id):
+    outfits = current_app.outfits_manager.get_outfits_by_item(item_id)
+    return json.dumps(outfits, cls=MongoJSONEncoder)
+
 @outfits_blueprint.route('/', methods=["POST"])
 def create_outfit():
     data = request.json

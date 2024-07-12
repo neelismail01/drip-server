@@ -194,8 +194,3 @@ class ItemsManager:
         item_object_id = ObjectId(item_id)
         item = self.items_collection.find_one({"_id": item_object_id, "user_id": user_object_id})
         return item is not None
-
-    def get_user_liked_count(self, user_id):
-        user_object_id = ObjectId(user_id)
-        liked_count = self.liked_items_collection.count_documents({ "posted_by": user_object_id })
-        return liked_count
