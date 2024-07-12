@@ -41,6 +41,22 @@ class OutfitsManager:
         ]))
         return outfits
 
+    def get_outfits_by_item(self, item_id):
+        item_object_id = ObjectId(item_id)
+        outfits = list(self.outfits_collection.aggregate([
+            { "$match": { "items": item_object_id } },
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "items",
+                    "foreignField": "_id",
+                    "as": "items"
+                }
+            },
+            { "$sort": { "date_created": -1 } }
+        ]))
+        return outfits
+
     def create_outfit(self, user_id, preference, items, media_urls, description, caption, embedding):
         item_ids = [ObjectId(item["_id"]) for item in items]
         user_object_id = ObjectId(user_id)

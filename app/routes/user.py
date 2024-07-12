@@ -72,3 +72,9 @@ def get_brands_following(user_id, my_user_id):
         brand["is_following_brand"] = is_following_brand
         followed_brands.append(brand)
     return json_util.dumps(followed_brands, cls=MongoJSONEncoder)
+
+@user_blueprint.route("/user-liked-count/<user_id>", methods=["GET"])
+def get_user_liked_count(user_id):
+    liked_count = current_app.user_manager.get_user_liked_count(user_id)
+    print(liked_count)
+    return json.dumps(liked_count, cls=MongoJSONEncoder)
