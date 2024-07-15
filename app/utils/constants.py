@@ -8,6 +8,11 @@ DEFAULT_BRAND_LOGO = "https://storage.googleapis.com/drip-bucket-1/default_brand
 # Brand search API base URL
 BRAND_FETCH_BASE_URL = "https://api.brandfetch.io/v2/search/"
 
+# Search result types
+USER_SEARCH_RESULT_TYPE = "user"
+BRAND_SEARCH_RESULT_TYPE = "brand"
+SUGGESTED_SEARCH_RESULT_TYPE = "suggested"
+
 # Prompt for evaluating chat for misuse
 ASSISTANT_MISUSE_PROMPT = (
     """
