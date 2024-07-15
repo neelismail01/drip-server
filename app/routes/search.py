@@ -1,97 +1,37 @@
-import requests
-
+import json
 from flask import (
     Blueprint,
     current_app,
-    jsonify,
     request
 )
+from app.utils.MongoJsonEncoder import MongoJSONEncoder
 
 search_blueprint = Blueprint('search', __name__)
 
-index_fields = {
-    'item_searchindex': ['item_name', 'brand', 'tag'],
-    'user_searchindex': ['name', 'email'],
-    'brand_searchindex': ['brand_name']
-}
+@search_blueprint.route("/", methods=["GET"])
+def get_search_results():
+    query = request.args.get("query")
+    users = current_app.search_manager.search_users(query)
+    brands = current_app.search_manager.search_brands(query)
+    query_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(query)
 
-autocomplete_index_fields = {
-    'item_autocomplete_searchindex': 'item_name',
-    'user_autocomplete_searchindex': 'name',
-    'brand_autocomplete_searchindex': 'brand_name'
-}
+@search_blueprint.route("/", methods=["POST"])
+def add_search():
+    data = request.json
+    user_id, profile_id, query, query_type = (
+        data.get("user_id"), 
+        data.get("profile_id"),
+        data.get("query"), 
+        data.get("type"),
+    )
+    current_app.search_manager.add_search(user_id, profile_id, query, query_type)
+    return json.dumps("Successfully added search.", cls=MongoJSONEncoder)
 
-def init_search(query, index_name, index_fields):
-    path = index_fields.get(index_name)
-
-    search_engine = [
-        {
-            '$search': {
-                'index': index_name,
-                'text': {
-                    'query': query,
-                    'path': path,
-                }
-            }
-        }
-    ]
-
-    return search_engine
-
-def init_search_autocomplete(query, index_name, autocomplete_index_fields):
-    path = autocomplete_index_fields.get(index_name)
-
-    search_engine = [
-        {
-            '$search': {
-                "index": index_name,
-                "autocomplete": {
-                    "query": query,
-                    "path": path,
-                    "tokenOrder": "sequential",
-                    "fuzzy": {}
-                }
-            }
-        },
-        {
-            '$limit': 10
-        }
-    ]
-
-    return search_engine
-
-@search_blueprint.route('/', methods=['GET'])
-def search():
-    db = current_app.mongo.drip
-
-    index_collections = {
-        'item_searchindex': db['items'],
-        'brand_searchindex': db['brands'],
-        'user_searchindex': db['users']
-    }
-    query = request.args.get('query')
-    index_name = request.args.get('index')
-    collection = index_collections.get(index_name)
-    search_engine = init_search(query, index_name, index_fields)
-    search_results = list(collection.aggregate(search_engine))
-    for result in search_results:
-        result['_id'] = str(result['_id'])
-    return jsonify(search_results)
-
-@search_blueprint.route('/autocomplete_search', methods=['GET'])
-def autocomplete_search():
-    db = current_app.mongo.drip
-
-    index_collections = {
-        'item_autocomplete_searchindex': db['items'],
-        'brand_autocomplete_searchindex': db['brands'],
-        'user_autocomplete_searchindex': db['users']
-    }
-    query = request.args.get('query')
-    index_name = request.args.get('index')
-    collection = index_collections.get(index_name)
-    search_engine = init_search_autocomplete(query, index_name, autocomplete_index_fields)
-    search_results = list(collection.aggregate(search_engine))
-    for result in search_results:
-        result['_id'] = str(result['_id'])
-    return jsonify(search_results)
+@search_blueprint.route("/autocomplete", methods=["GET"])
+def get_autocomplete_results():
+    query = request.args.get("query")
+    users = current_app.search_manager.search_users(query)
+    brands = current_app.search_manager.search_brands(query)
+    results = users + brands
+    sorted_results = list(sorted(results, key=lambda item: item["score"], reverse=True))
+    return json.dumps(sorted_results, cls=MongoJSONEncoder)
