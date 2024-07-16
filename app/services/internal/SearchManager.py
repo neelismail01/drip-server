@@ -75,15 +75,16 @@ class SearchManager():
         ]))
         return brands
 
-    def add_search(self, user_id, profile_id, query, query_type):
+    def add_search(self, user_id, profile_id, query, query_type, autocomplete):
         user_object_id = ObjectId(user_id)
-        profile_object_id = ObjectId(profile_id)
+        profile_object_id = ObjectId(profile_id) if profile_id else None
         current_time = datetime.utcnow()
         self.searches_collection.insert_one({
             "user_id": user_object_id,
             "profile_id": profile_object_id,
             "query": query,
             "query_type": query_type,
+            "autocomplete": autocomplete,
             "date_created": current_time,
         })
     
