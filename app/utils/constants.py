@@ -9,9 +9,10 @@ DEFAULT_BRAND_LOGO = "https://storage.googleapis.com/drip-bucket-1/default_brand
 BRAND_FETCH_BASE_URL = "https://api.brandfetch.io/v2/search/"
 
 # Search result types
-USER_SEARCH_RESULT_TYPE = "user"
-BRAND_SEARCH_RESULT_TYPE = "brand"
-SUGGESTED_SEARCH_RESULT_TYPE = "suggested"
+USER_SEARCH_RESULT_TYPE = "user profile"
+BRAND_SEARCH_RESULT_TYPE = "brand profile"
+SUGGESTED_SEARCH_RESULT_TYPE = "suggested text autocomplete"
+SUBMITTED_SEARCH_QUERY = "user submitted search"
 
 # Prompt for evaluating chat for misuse
 ASSISTANT_MISUSE_PROMPT = (
