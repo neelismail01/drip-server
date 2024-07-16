@@ -229,3 +229,26 @@ def get_top_shoppers(brand_name):
             top_shoppers.append(user)
 
     return json.dumps(top_shoppers, cls=MongoJSONEncoder), 200
+
+@brands_blueprint.route('/brand-drip-score/<brand_name>', methods=["GET"])
+def get_brand_drip_score(brand_name):
+    db = current_app.mongo.drip
+    brands_collection = db['brands']
+    items_collection = db['items']
+    liked_items_collection = db['liked_items']
+    wishlist_items_collection = db['wishlist_items']
+
+    brand = brands_collection.find_one({'name': brand_name})
+    if not brand:
+        return "Brand not found", 404
+        
+    items = list(items_collection.find({"brand": brand_name}))
+    item_ids = [item['_id'] for item in items]
+    
+    item_count = items_collection.count_documents({"brand": brand_name})
+    liked_count = liked_items_collection.count_documents({'post_id': {'$in': item_ids}})
+    added_count = wishlist_items_collection.count_documents({'post_id': {'$in': item_ids}})
+
+    drip_score = item_count + (liked_count * 2) + (added_count * 3)
+    
+    return json.dumps(drip_score, cls=MongoJSONEncoder)

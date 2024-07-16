@@ -7,8 +7,10 @@ class UserManager:
         self.db = mongo_client["drip"]
         self.users_collection = self.db["users"]
         self.items_collection = self.db["items"]
+        self.outfits_collection = self.db["outfits"]
         self.brands_collection = self.db["brands"]
         self.liked_items_collection = self.db["liked_items"]
+        self.wishlist_items_collection = self.db["wishlist_items"]
 
     def get_user_by_email(self, email):
         user = self.users_collection.find_one({ "email": email })
@@ -85,3 +87,15 @@ class UserManager:
         user_object_id = ObjectId(user_id)
         liked_count = self.liked_items_collection.count_documents({ "posted_by": user_object_id })
         return liked_count
+
+    def get_user_post_count(self, user_id):
+        user_object_id = ObjectId(user_id)
+        item_count = self.items_collection.count_documents({ "user_id": user_object_id })
+        outfit_count = self.outfits_collection.count_documents({ "user_id": user_object_id })
+        post_count = item_count + outfit_count
+        return post_count
+
+    def get_user_added_count(self, user_id):
+        user_object_id = ObjectId(user_id)
+        added_count = self.wishlist_items_collection.count_documents({ "posted_by": user_object_id })
+        return added_count

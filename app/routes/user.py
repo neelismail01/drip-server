@@ -73,8 +73,10 @@ def get_brands_following(user_id, my_user_id):
         followed_brands.append(brand)
     return json_util.dumps(followed_brands, cls=MongoJSONEncoder)
 
-@user_blueprint.route("/user-liked-count/<user_id>", methods=["GET"])
-def get_user_liked_count(user_id):
+@user_blueprint.route("/user-drip-score/<user_id>", methods=["GET"])
+def get_user_drip_score(user_id):
+    post_count = current_app.user_manager.get_user_post_count(user_id)
     liked_count = current_app.user_manager.get_user_liked_count(user_id)
-    print(liked_count)
-    return json.dumps(liked_count, cls=MongoJSONEncoder)
+    added_count = current_app.user_manager.get_user_added_count(user_id)
+    drip_score = post_count + (liked_count * 2) + (added_count * 3)
+    return json.dumps(drip_score, cls=MongoJSONEncoder)
