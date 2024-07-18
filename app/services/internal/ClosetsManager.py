@@ -40,7 +40,7 @@ class ClosetsManager:
 
         if closet:
             product_ids = closet['products']
-            items = list(self.items_collection.find({'_id': {'$in': product_ids}}))
+            items = list(self.items_collection.find({'_id': {'$in': product_ids}}).sort('date_created', -1))
             return items
 
         return []
