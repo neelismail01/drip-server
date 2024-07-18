@@ -17,7 +17,7 @@ def get_all_items():
 @items_blueprint.route("/", methods=["POST"])
 def create_item():
     data = request.json
-    user_id, preference, caption, description, product_page_link, brand_info, media_urls = (
+    user_id, preference, caption, description, product_page_link, brand_info, media_urls, closets = (
         data.get("user_id"),
         data.get("preference"),
         data.get("caption"),
@@ -25,6 +25,7 @@ def create_item():
         data.get("productPageLink"),
         data.get("brandInfo"),
         data.get("mediaUrls"),
+        data.get("closets")
     )
     description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
     user_info = { "user_id": user_id, "preference": preference }
@@ -40,7 +41,7 @@ def create_item():
         current_app.custom_search_manager.get_brand_website_domain(brand_info["name"])
     )
     brand_info["icon"] = brand_info["icon"] or DEFAULT_BRAND_LOGO
-    result = current_app.items_manager.create_item(user_info, item_info, brand_info)
+    result = current_app.items_manager.create_item(user_info, item_info, brand_info, closets)
     return (result, 200) if result == "Item was created" else (result, 400)
 
 @items_blueprint.route("/<user_id>", methods=["GET"])

@@ -10,6 +10,7 @@ class ItemsManager:
         self.wishlist_items_collection = self.db["wishlist_items"]
         self.brands_collection = self.db['brands']
         self.social_collection = self.db["social_graph"]
+        self.closets_collection = self.db["closets"]
 
     def get_all_items(self):
         items = list(self.items_collection.find({}))
@@ -57,7 +58,14 @@ class ItemsManager:
                     "date_created": current_time
                 })
 
-    def create_item(self, user_info, item_info, brand_info):
+    def add_item_to_closets(self, item_id, closets):
+        for closet in closets:
+            self.closets_collection.update_one(
+                {'_id': ObjectId(closet['_id'])},
+                {'$addToSet': {'products': item_id}}
+            )
+
+    def create_item(self, user_info, item_info, brand_info, closets):
         user_object_id = ObjectId(user_info["user_id"])
         self.insert_new_brand(brand_info, user_object_id)
         current_time = datetime.utcnow()
@@ -72,6 +80,8 @@ class ItemsManager:
             "product_page_link": item_info["product_page_link"] or brand_info["domain"],
             "date_created": current_time
         })
+        item_id = result.inserted_id
+        self.add_item_to_closets(item_id, closets)
         return "Item was created" if result else "Error creating item"
 
     def get_user_items(self, user_id):
