@@ -108,7 +108,7 @@ def brand_closet(brand_name):
     if not brand:
         return "Brand not found", 404
     
-    items = list(items_collection.find({"brand": brand_name}))
+    items = list(items_collection.find({"brand": brand_name}).sort('date_created', -1))
     
     return json.dumps(items, cls=MongoJSONEncoder), 200
 

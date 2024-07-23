@@ -29,6 +29,18 @@ class ClosetsManager:
     def get_closets_by_user(self, user_id):
         user_object_id = ObjectId(user_id)
         closets = list(self.closets_collection.find({'user_id': user_object_id}))
+
+        for closet in closets:
+            product_ids = closet['products']
+            if len(product_ids) > 3:
+                closet['cover_photo_products'] = list(
+                    self.items_collection.find({'_id': {'$in': product_ids}}).sort('date_created', -1).limit(4)
+                )
+            elif 0 < len(product_ids) <= 3:
+                closet['cover_photo_products'] = list(
+                    self.items_collection.find({'_id': {'$in': product_ids}}).sort('date_created', -1).limit(1)
+                )
+
         return closets
 
     def get_items_by_closet(self, user_id, closet_name):
