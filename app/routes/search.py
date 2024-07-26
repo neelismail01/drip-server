@@ -33,9 +33,14 @@ def get_autocomplete_results():
     query = request.args.get("query")
     users = current_app.search_manager.search_users(query)
     brands = current_app.search_manager.search_brands(query)
-    results = users + brands
-    sorted_results = list(sorted(results, key=lambda item: item["score"], reverse=True))
-    return json.dumps(sorted_results, cls=MongoJSONEncoder)
+    matching_queries = current_app.search_manager.search_matching_queries(query)
+    profile_results = users + brands
+    sorted_profile_results = list(sorted(profile_results, key=lambda item: item["score"], reverse=True))
+
+    return json.dumps({
+        "profiles": sorted_profile_results,
+        "queries": matching_queries
+    }, cls=MongoJSONEncoder)
 
 @search_blueprint.route("/brands", methods=["GET"])
 def get_brand_results():
@@ -47,5 +52,4 @@ def get_brand_results():
 def get_user_results():
     query = request.args.get("query")
     users = current_app.search_manager.search_users(query)
-    print(users, query)
     return json.dumps(users, cls=MongoJSONEncoder)

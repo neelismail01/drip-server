@@ -75,6 +75,50 @@ class SearchManager():
         ]))
         return brands
 
+    def search_matching_queries(self, query):
+        matching_queries = list(self.searches_collection.aggregate([
+            {
+                "$search": {
+                    "index": "searches_index",
+                    "compound": {
+                        "should": [
+                            { "autocomplete": { "query": query, "path": "query" } }
+                        ]
+                    }
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "query": 1,
+                    "score": { "$meta": "searchScore" },
+                    "type": SUGGESTED_SEARCH_RESULT_TYPE
+                }
+            },
+            {
+                "$sort": { "score": -1 }
+            },
+            {
+                "$group": {
+                    "_id": "$query",
+                    "query": { "$first": "$query" },
+                    "score": { "$first": "$score" },
+                    "type": { "$first": "$type" },
+                    "_id_doc": { "$first": "$_id" }
+                }
+            },
+            {
+                "$project": {
+                    "_id": "$_id_doc",
+                    "query": 1,
+                    "score": 1,
+                    "type": 1
+                }
+            },
+            { "$limit": 5 }
+        ]))
+        return matching_queries
+
     def add_search(self, user_id, profile_id, query, query_type, autocomplete):
         user_object_id = ObjectId(user_id)
         profile_object_id = ObjectId(profile_id) if profile_id else None
