@@ -10,7 +10,7 @@ class UserManager:
         self.outfits_collection = self.db["outfits"]
         self.brands_collection = self.db["brands"]
         self.liked_items_collection = self.db["liked_items"]
-        self.wishlist_items_collection = self.db["wishlist_items"]
+        self.wishlists_collection = self.db["wishlists"]
 
     def get_user_by_email(self, email):
         user = self.users_collection.find_one({ "email": email })
@@ -36,6 +36,15 @@ class UserManager:
         })
         user_id = result.inserted_id
         inserted_user = self.users_collection.find_one({"_id": user_id})
+
+        # create empty "All Products" wishlist for user
+        self.wishlists_collection.insert_one({
+            'date_created': current_time,
+            'name': "All Products",
+            'user_id': user_id,
+            'products': [],
+        })
+
         return inserted_user
 
     def check_username_exists(self, username):
@@ -97,5 +106,17 @@ class UserManager:
 
     def get_user_added_count(self, user_id):
         user_object_id = ObjectId(user_id)
-        added_count = self.wishlist_items_collection.count_documents({ "posted_by": user_object_id })
-        return added_count
+        
+        pipeline = [
+            {"$match": {"name": "All Products"}},
+            {"$unwind": "$products"},
+            {"$match": {"products.posted_by": user_object_id}},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]
+        
+        result = list(self.wishlists_collection.aggregate(pipeline))
+        
+        if result:
+            return result[0]['count']
+        else:
+            return 0

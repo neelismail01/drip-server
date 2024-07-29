@@ -235,20 +235,40 @@ def get_brand_drip_score(brand_name):
     db = current_app.mongo.drip
     brands_collection = db['brands']
     items_collection = db['items']
+    outfits_collection = db['outfits']
     liked_items_collection = db['liked_items']
-    wishlist_items_collection = db['wishlist_items']
+    wishlists_collection = db['wishlists']
 
     brand = brands_collection.find_one({'name': brand_name})
     if not brand:
         return "Brand not found", 404
-        
+
     items = list(items_collection.find({"brand": brand_name}))
     item_ids = [item['_id'] for item in items]
-    
+
     item_count = items_collection.count_documents({"brand": brand_name})
     liked_count = liked_items_collection.count_documents({'post_id': {'$in': item_ids}})
-    added_count = wishlist_items_collection.count_documents({'post_id': {'$in': item_ids}})
+
+    # Find outfits that contain at least one item from the brand
+    outfits = list(outfits_collection.find({'items': {'$in': item_ids}}))
+    outfit_ids = [outfit['_id'] for outfit in outfits]
+
+    # Count added items and outfits in the All Products wishlist
+    all_products_wishlist_count = wishlists_collection.aggregate([
+        {"$match": {"name": "All Products"}},
+        {"$unwind": "$products"},
+        {"$match": {"$or": [
+            {"products.id": {"$in": item_ids}},
+            {"products.id": {"$in": outfit_ids}}
+        ]}},
+        {"$group": {"_id": None, "count": {"$sum": 1}}}
+    ])
+
+    added_count = 0
+    result = list(all_products_wishlist_count)
+    if result:
+        added_count = result[0]["count"]
 
     drip_score = item_count + (liked_count * 2) + (added_count * 3)
-    
+
     return json.dumps(drip_score, cls=MongoJSONEncoder)

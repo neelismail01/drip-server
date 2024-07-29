@@ -6,7 +6,7 @@ class OutfitsManager:
         self.db = mongo_client["drip"]
         self.outfits_collection = self.db["outfits"]
         self.liked_items_collection = self.db["liked_items"]
-        self.wishlist_items_collection = self.db["wishlist_items"]
+        self.wishlists_collection = self.db["wishlists"]
 
     def get_all_outfits(self, page, page_size):
         skip = (page - 1) * page_size
@@ -131,64 +131,6 @@ class OutfitsManager:
         self.liked_items_collection.delete_one({ "post_id": outfit_object_id, "liked_by": user_object_id })
         return "Sucessfully unliked outfit"
 
-    def get_wishlist_outfits(self, user_id):
-        user_object_id = ObjectId(user_id)
-        wishlist_outfits = list(self.wishlist_items_collection.aggregate([
-            { "$match": {"added_by": user_object_id, "post_type": "outfit" } },
-            {
-                "$lookup": {
-                    "from": "outfits",
-                    "localField": "post_id",
-                    "foreignField": "_id",
-                    "as": "outfit"
-                }
-            },
-            { "$unwind": "$outfit" },
-            { "$project": { "outfit": 1, "_id": 0 } },
-            { "$replaceRoot": { "newRoot": "$outfit" } },
-            {
-                "$lookup": {
-                    "from": "items",
-                    "localField": "items",
-                    "foreignField": "_id",
-                    "as": "items"
-                }
-            },
-            { "$sort": { "date_created": -1 } }
-        ]))
-        return wishlist_outfits
-
-    def create_wishlist_outfit(self, user_id, outfit_id):
-        outfit_object_id = ObjectId(outfit_id)
-        user_object_id = ObjectId(user_id)
-        current_time = datetime.utcnow()
-
-        # Fetch the item to get the user who posted it
-        outfit = self.outfits_collection.find_one({"_id": outfit_object_id})
-        if not outfit:
-            return "Outfit not found"
-
-        posted_by_user_id = outfit["user_id"]
-
-        result = self.wishlist_items_collection.update_one(
-            { "post_id": outfit_object_id, "added_by": user_object_id },
-            { "$setOnInsert": {
-                "date_liked": current_time,
-                "added_by": user_object_id,
-                "posted_by": posted_by_user_id,
-                "post_type": "outfit",
-                "post_id": outfit_object_id
-            }},
-            upsert=True
-        )
-        return "Outfit already in wishlist" if result.matched_count > 0 else "Outfit added to wishlist"
-
-    def delete_wishlist_outfit(self, user_id, outfit_id):
-        outfit_object_id = ObjectId(outfit_id)
-        user_object_id = ObjectId(user_id)
-        self.wishlist_items_collection.delete_one({ "post_id": outfit_object_id, "added_by": user_object_id })
-        return "Sucessfully removed outfit from wishlist"
-
     def get_outfit_liked_count(self, outfit_id):
         outfit_object_id = ObjectId(outfit_id)
         liked_count = self.liked_items_collection.count_documents({ "post_id": outfit_object_id })
@@ -196,5 +138,23 @@ class OutfitsManager:
     
     def get_outfit_added_count(self, outfit_id):
         outfit_object_id = ObjectId(outfit_id)
-        added_count = self.wishlist_items_collection.count_documents({ "post_id": outfit_object_id })
-        return added_count
+        
+        pipeline = [
+            {"$match": {"name": "All Products"}},
+            {"$unwind": "$products"},
+            {"$match": {"products.id": outfit_object_id}},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]
+        
+        result = list(self.wishlists_collection.aggregate(pipeline))
+        
+        if result:
+            return result[0]['count']
+        else:
+            return 0
+
+    def check_outfit_owned(self, user_id, outfit_id):
+        user_object_id = ObjectId(user_id)
+        outfit_object_id = ObjectId(outfit_id)
+        outfit = self.outfits_collection.find_one({"_id": outfit_object_id, "user_id": user_object_id})
+        return outfit is not None

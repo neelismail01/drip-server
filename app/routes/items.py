@@ -71,28 +71,6 @@ def delete_liked_item():
     result = current_app.items_manager.delete_liked_item(item_id, user_id)
     return result, 200
 
-@items_blueprint.route("/wishlist", methods=["GET"])
-def get_wishlist_items():
-    user_id = request.args.get("user_id")
-    wishlist_items = current_app.items_manager.get_wishlist_items(user_id)
-    return json.dumps(wishlist_items, cls=MongoJSONEncoder)
-
-@items_blueprint.route("/wishlist", methods=["POST"])
-def create_wishlist_item():
-    data = request.json
-    item_id = data.get("itemId")
-    user_id = data.get("user_id")
-    result = current_app.items_manager.create_wishlist_item(item_id, user_id)
-    return (result, 200) if result == "Item was added to wishlist" else (result, 400)
-
-@items_blueprint.route("/wishlist", methods=["DELETE"])
-def delete_wishlist_item():
-    data = request.json
-    item_id = data.get("itemId")
-    user_id = data.get("user_id")
-    result = current_app.items_manager.delete_wishlist_item(item_id, user_id)
-    return result, 200
-
 @items_blueprint.route("/similar", methods=["GET"])
 def get_similar_items():
     db = current_app.mongo.drip

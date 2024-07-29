@@ -57,7 +57,7 @@ def create_liked_outfit():
     user_id = data.get('user_id')
     outfit = data.get('outfit')
     outfit_id = outfit["_id"]
-    result = current_app.outfits_manager.created_liked_outfit(user_id, outfit_id)
+    result = current_app.outfits_manager.create_liked_outfit(user_id, outfit_id)
     return (result, 200) if result == "Outfit was liked" else (result, 400)
 
 @outfits_blueprint.route('/liked', methods=["DELETE"])
@@ -109,3 +109,10 @@ def analyze_outfit_image():
     base64_image = data.get("base64_image")
     outfit_details = current_app.image_vision_manager.get_details_from_outfit_image(base64_image)
     return json.dumps(outfit_details, cls=MongoJSONEncoder)
+
+@outfits_blueprint.route("/owned", methods=["GET"])
+def check_outfit_owned():
+    user_id = request.args.get("user_id")
+    outfit_id = request.args.get("outfit_id")
+    owned = current_app.outfits_manager.check_outfit_owned(user_id, outfit_id)
+    return json.dumps({"owned": owned}), 200
