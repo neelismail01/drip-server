@@ -7,9 +7,7 @@ class FeedManager:
         self.outfits_collection = self.db["outfits"]
         self.social_graph_collection = self.db["social_graph"]
         self.liked_items_collection = self.db["liked_items"]
-        self.wishlist_items_collection = self.db["wishlist_items"]
-        self.liked_outfits_collection = self.db["liked_outfits"]
-        self.wishlist_outfits_collection = self.db["wishlist_outfits"]
+        self.wishlists_collection = self.db["wishlists"]
 
     def get_all_items(self, filter={}):
         items = list(self.items_collection.aggregate([
@@ -52,9 +50,16 @@ class FeedManager:
         item_ids = [item["post_id"] for item in liked_items]
         return list(self.items_collection.find({"_id": {"$in": item_ids}}))
 
-    def get_wishlist_items_by_users(self, user_ids, collection):
-        added_items = list(collection.find({"added_by": {"$in": user_ids}}))
-        item_ids = [item["post_id"] for item in added_items]
+    def get_wishlist_items_by_users(self, user_ids):
+        wishlists = list(self.wishlists_collection.find({
+            "user_id": {"$in": [ObjectId(user_id) for user_id in user_ids]},
+            "name": "All Products"
+        }))
+        item_ids = []
+        for wishlist in wishlists:
+            for product in wishlist["products"]:
+                if product["type"] == "item":
+                    item_ids.append(product["id"])
         return list(self.items_collection.find({"_id": {"$in": item_ids}}))
 
     def get_liked_outfits_by_users(self, user_ids, collection):
@@ -62,9 +67,16 @@ class FeedManager:
         outfit_ids = [outfit["post_id"] for outfit in liked_outfits]
         return list(self.outfits_collection.find({"_id": {"$in": outfit_ids}}))
 
-    def get_wishlist_outfits_by_users(self, user_ids, collection):
-        added_outfits = list(collection.find({"added_by": {"$in": user_ids}}))
-        outfit_ids = [outfit["post_id"] for outfit in added_outfits]
+    def get_wishlist_outfits_by_users(self, user_ids):
+        wishlists = list(self.wishlists_collection.find({
+            "user_id": {"$in": [ObjectId(user_id) for user_id in user_ids]},
+            "name": "All Products"
+        }))
+        outfit_ids = []
+        for wishlist in wishlists:
+            for product in wishlist["products"]:
+                if product["type"] == "outfit":
+                    outfit_ids.append(product["id"])
         return list(self.outfits_collection.find({"_id": {"$in": outfit_ids}}))
 
     def get_items_by_brands(self, brand_ids):
@@ -85,10 +97,10 @@ class FeedManager:
         outfits_by_following = self.get_outfits_by_users(following_users)
         
         liked_items_by_following = self.get_liked_items_by_users(following_users, self.liked_items_collection)
-        wishlist_items_by_following = self.get_wishlist_items_by_users(following_users, self.wishlist_items_collection)
+        wishlist_items_by_following = self.get_wishlist_items_by_users(following_users)
         
         liked_outfits_by_following = self.get_liked_outfits_by_users(following_users, self.liked_items_collection)
-        wishlist_outfits_by_following = self.get_wishlist_outfits_by_users(following_users, self.wishlist_items_collection)
+        wishlist_outfits_by_following = self.get_wishlist_outfits_by_users(following_users)
         
         items_by_brands = self.get_items_by_brands(followed_brands)
         
@@ -101,11 +113,11 @@ class FeedManager:
                             liked_outfits_by_following + wishlist_outfits_by_following + \
                             remaining_items + remaining_outfits
         
-        # Remove duplicates
+        # Remove duplicates and user's products
         seen = set()
         unique_products = []
         for product in combined_products:
-            if product["_id"] not in seen:
+            if product["_id"] not in seen and product["user_id"] != ObjectId(user_id):
                 unique_products.append(product)
                 seen.add(product["_id"])
         

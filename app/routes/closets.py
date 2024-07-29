@@ -29,17 +29,17 @@ def get_closets_by_user(user_id):
     closets = current_app.closets_manager.get_closets_by_user(user_id)
     return json.dumps(closets, cls=MongoJSONEncoder)
 
-@closets_blueprint.route("/items", methods=["GET"])
-def get_items_by_closet():
+@closets_blueprint.route("/products", methods=["GET"])
+def get_products_by_closet():
     user_id = request.args.get("user_id")
     closet = request.args.get("closet")
-    items = current_app.closets_manager.get_items_by_closet(user_id, closet)
-    return json.dumps(items, cls=MongoJSONEncoder)
+    products = current_app.closets_manager.get_products_by_closet(user_id, closet)
+    return json.dumps(products, cls=MongoJSONEncoder)
 
-@closets_blueprint.route("/<product_id>", methods=["POST"])
-def edit_closet_memberships(product_id):
+@closets_blueprint.route("/<product_id>/<product_type>", methods=["POST"])
+def edit_closet_memberships(product_id, product_type):
     data = request.json
     closets = data.get("closets")
     user_id = data.get("user_id")
-    result = current_app.closets_manager.edit_closet_memberships(closets, user_id, product_id)
+    result = current_app.closets_manager.edit_closet_memberships(closets, user_id, product_id, product_type)
     return result

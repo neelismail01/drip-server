@@ -7,7 +7,7 @@ class ItemsManager:
         self.users_collection = self.db["users"]
         self.items_collection = self.db["items"]
         self.liked_items_collection = self.db["liked_items"]
-        self.wishlist_items_collection = self.db["wishlist_items"]
+        self.wishlists_collection = self.db["wishlists"]
         self.brands_collection = self.db['brands']
         self.social_collection = self.db["social_graph"]
         self.closets_collection = self.db["closets"]
@@ -139,56 +139,6 @@ class ItemsManager:
         self.liked_items_collection.delete_one({ "post_id": item_object_id, "liked_by": user_object_id })
         return "Sucessfully unliked item"
 
-    def get_wishlist_items(self, user_id):
-        user_object_id = ObjectId(user_id)
-        wishlist_items = list(self.wishlist_items_collection.aggregate([
-            { "$match": { "added_by": user_object_id, "post_type": "item" } },
-            {
-                "$lookup": {
-                    "from": "items",
-                    "localField": "post_id",
-                    "foreignField": "_id",
-                    "as": "item"
-                }
-            },
-            { "$unwind": "$item" },
-            { "$project": { "item": 1, "_id": 0 } },
-            { "$replaceRoot": { "newRoot": "$item" } },
-            { "$sort": { "date_created": -1 } }
-        ]))
-        return wishlist_items
-
-    def create_wishlist_item(self, item_id, user_id):
-        item_object_id = ObjectId(item_id)
-        user_object_id = ObjectId(user_id)
-        current_time = datetime.utcnow()
-
-        # Fetch the item to get the user who posted it
-        item = self.items_collection.find_one({"_id": item_object_id})
-        if not item:
-            return "Item not found"
-
-        posted_by_user_id = item["user_id"]
-
-        result = self.wishlist_items_collection.update_one(
-            { "post_id": item_object_id, "added_by": user_object_id },
-            { "$setOnInsert": {
-                "date_liked": current_time,
-                "added_by": user_object_id,
-                "posted_by": posted_by_user_id,
-                "post_type": "item",
-                "post_id": item_object_id
-            }},
-            upsert=True
-        )
-        return "Item already in wishlist" if result.matched_count > 0 else "Item was added to wishlist"
-
-    def delete_wishlist_item(self, item_id, user_id):
-        item_object_id = ObjectId(item_id)
-        user_object_id = ObjectId(user_id)
-        self.wishlist_items_collection.delete_one({ "post_id": item_object_id, "added_by": user_object_id })
-        return "Sucessfully removed item from wishlist"
-
     def get_item_liked_count(self, item_id):
         item_object_id = ObjectId(item_id)
         liked_count = self.liked_items_collection.count_documents({ "post_id": item_object_id })
@@ -196,8 +146,20 @@ class ItemsManager:
     
     def get_item_added_count(self, item_id):
         item_object_id = ObjectId(item_id)
-        added_count = self.wishlist_items_collection.count_documents({ "post_id": item_object_id })
-        return added_count
+        
+        pipeline = [
+            {"$match": {"name": "All Products"}},
+            {"$unwind": "$products"},
+            {"$match": {"products.id": item_object_id}},
+            {"$group": {"_id": None, "count": {"$sum": 1}}}
+        ]
+        
+        result = list(self.wishlists_collection.aggregate(pipeline))
+        
+        if result:
+            return result[0]['count']
+        else:
+            return 0
         
     def check_item_owned(self, user_id, item_id):
         user_object_id = ObjectId(user_id)
