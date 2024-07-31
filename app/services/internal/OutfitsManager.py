@@ -7,6 +7,7 @@ class OutfitsManager:
         self.outfits_collection = self.db["outfits"]
         self.liked_items_collection = self.db["liked_items"]
         self.wishlists_collection = self.db["wishlists"]
+        self.closets_collection = self.db["closets"]
 
     def get_all_outfits(self, page, page_size):
         skip = (page - 1) * page_size
@@ -57,11 +58,25 @@ class OutfitsManager:
         ]))
         return outfits
 
-    def create_outfit(self, user_id, preference, items, media_urls, description, caption, embedding):
+    def add_outfit_to_closets(self, outfit_id, closets):
+        current_time = datetime.utcnow()
+        for closet in closets:
+            self.closets_collection.update_one(
+                {'_id': ObjectId(closet['_id'])},
+                {'$addToSet': {
+                    'products': {
+                        'type': "outfit", 
+                        'id': outfit_id,
+                        'date_added': current_time,
+                    }
+                }}
+            )
+
+    def create_outfit(self, user_id, preference, items, media_urls, description, caption, embedding, closets):
         item_ids = [ObjectId(item["_id"]) for item in items]
         user_object_id = ObjectId(user_id)
         current_time = datetime.utcnow()
-        self.outfits_collection.insert_one({
+        result = self.outfits_collection.insert_one({
             "user_id": user_object_id,
             "gender": preference,
             "items": item_ids,
@@ -71,6 +86,8 @@ class OutfitsManager:
             "caption": caption,
             "date_created": current_time
         })
+        outfit_id = result.inserted_id
+        self.add_outfit_to_closets(outfit_id, closets)
         return "Created outfit"    
 
     def get_liked_outfits(self, user_id):
