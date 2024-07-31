@@ -80,3 +80,12 @@ def get_user_drip_score(user_id):
     added_count = current_app.user_manager.get_user_added_count(user_id)
     drip_score = post_count + (liked_count * 2) + (added_count * 3)
     return json.dumps(drip_score, cls=MongoJSONEncoder)
+
+@user_blueprint.route("/edit-profile", methods=["PUT"])
+def edit_user_profile():
+    data = request.json
+    user_id = data.get("user_id")
+    name = data.get("name")
+    username = data.get("username")
+    results = current_app.user_manager.edit_user_profile(user_id, name, username)
+    return results
