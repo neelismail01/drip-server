@@ -11,6 +11,7 @@ class UserManager:
         self.brands_collection = self.db["brands"]
         self.liked_items_collection = self.db["liked_items"]
         self.wishlists_collection = self.db["wishlists"]
+        self.social_graph_collection = self.db["social_graph"]
 
     def get_user_by_email(self, email):
         user = self.users_collection.find_one({ "email": email })
@@ -120,3 +121,45 @@ class UserManager:
             return result[0]['count']
         else:
             return 0
+
+    def edit_user_profile(self, user_id, name, username):
+        user_object_id = ObjectId(user_id)
+        user = self.users_collection.find_one({ "_id": user_object_id })
+        
+        results = []
+
+        if user['name'] != name:
+            self.users_collection.update_one(
+                { "_id": user_object_id },
+                { "$set": { "name": name }}
+            )
+            results.append("Updated name")
+            
+            # Update name in social_graph where user is a follower or followee
+            self.social_graph_collection.update_many(
+                { "follower_id": user_object_id },
+                { "$set": { "follower_name": name }}
+            )
+            self.social_graph_collection.update_many(
+                { "followee_id": user_object_id },
+                { "$set": { "followee_name": name }}
+            )
+        
+        if user['username'] != username:
+            self.users_collection.update_one(
+                { "_id": user_object_id },
+                { "$set": { "username": username }}
+            )
+            results.append("Updated username")
+            
+            # Update username in social_graph where user is a follower or followee
+            self.social_graph_collection.update_many(
+                { "follower_id": user_object_id },
+                { "$set": { "follower_username": username }}
+            )
+            self.social_graph_collection.update_many(
+                { "followee_id": user_object_id },
+                { "$set": { "followee_username": username }}
+            )
+
+        return results
