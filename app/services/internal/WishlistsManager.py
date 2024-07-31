@@ -6,7 +6,6 @@ class WishlistsManager:
         self.db = mongo_client["drip"]
         self.items_collection = self.db["items"]
         self.outfits_collection = self.db["outfits"]
-        self.closets_collection = self.db["closets"]
         self.wishlists_collection = self.db["wishlists"]
 
     def create_wishlist(self, name, user_id):
@@ -20,7 +19,7 @@ class WishlistsManager:
                 'user_id': user_object_id,
                 'products': [],
             })
-            return "Wish List was created" if new_closet else "Error creating wish list"
+            return "Wish List was created" if new_wishlist else "Error creating wish list"
         return "Wish List already exists"
 
     def delete_wishlist(self, name, user_id):
@@ -147,3 +146,61 @@ class WishlistsManager:
                     else:
                         results.append(f"Product was not in wish list '{wishlist['name']}'")
         return results
+
+    def edit_wishlist_name(self, user_id, current_name, new_name):
+        user_object_id = ObjectId(user_id)
+        wishlist = self.wishlists_collection.find_one({
+            'user_id': user_object_id,
+            'name': current_name
+        })
+
+        # Check if a wishlist with the new name already exists
+        existing_wishlist = self.wishlists_collection.find_one({
+            'user_id': user_object_id,
+            'name': new_name
+        })
+        if existing_wishlist:
+            return {"error": "Wishlist with the new name already exists"}, 400
+
+        # Update the wishlist name
+        result = self.wishlists_collection.update_one(
+            {'_id': wishlist['_id']},
+            {'$set': {'name': new_name}}
+        )
+
+        if result.modified_count == 0:
+            return {"error": "Failed to update wishlist name"}, 500
+
+        return {"message": "Wishlist name updated successfully"}
+
+    def remove_products_from_wishlist(self, user_id, wishlist_name, products):
+        user_object_id = ObjectId(user_id)
+        product_ids = [ObjectId(product['_id']) for product in products]
+
+        if wishlist_name == "All Products":
+            # Remove products from all wish lists of the user
+            user_wishlists = self.wishlists_collection.find({'user_id': user_object_id})
+            for wishlist in user_wishlists:
+                result = self.wishlists_collection.update_one(
+                    {'_id': wishlist['_id']},
+                    {'$pull': {'products': {'id': {'$in': product_ids}}}}
+                )
+        else:
+            # Remove products from the specified wish list
+            wishlist = self.wishlists_collection.find_one({
+                'user_id': user_object_id,
+                'name': wishlist_name
+            })
+
+            if not wishlist:
+                return {"error": "Wishlist not found"}, 404
+
+            result = self.wishlists_collection.update_one(
+                {'_id': wishlist['_id']},
+                {'$pull': {'products': {'id': {'$in': product_ids}}}}
+            )
+
+            if result.modified_count == 0:
+                return {"error": "Failed to remove products from wish list"}, 500
+
+        return {"message": "Products removed from wish list(s) successfully"}

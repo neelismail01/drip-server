@@ -137,3 +137,116 @@ class ClosetsManager:
                     else:
                         results.append(f"Product was not in closet '{closet['name']}'")
         return results
+
+    def edit_closet_name(self, user_id, current_name, new_name):
+        user_object_id = ObjectId(user_id)
+        closet = self.closets_collection.find_one({
+            'user_id': user_object_id,
+            'name': current_name
+        })
+
+        # Check if a wishlist with the new name already exists
+        existing_closet = self.closets_collection.find_one({
+            'user_id': user_object_id,
+            'name': new_name
+        })
+        if existing_closet:
+            return {"error": "Closet with the new name already exists"}, 400
+
+        # Update the closet name
+        result = self.closets_collection.update_one(
+            {'_id': closet['_id']},
+            {'$set': {'name': new_name}}
+        )
+
+        if result.modified_count == 0:
+            return {"error": "Failed to update closet name"}, 500
+
+        return {"message": "Closet name updated successfully"}
+
+    def remove_products_from_closet(self, user_id, closet_name, products):
+        user_object_id = ObjectId(user_id)
+        closet = self.closets_collection.find_one({
+            'user_id': user_object_id,
+            'name': closet_name
+        })
+
+        product_ids = [ObjectId(product['_id']) for product in products]
+
+        result = self.closets_collection.update_one(
+            {'_id': closet['_id']},
+            {'$pull': {'products': {'id': {'$in': product_ids}}}}
+        )
+
+        if result.modified_count == 0:
+            return {"error": "Failed to remove products from closet"}, 500
+
+        return {"message": "Products removed from closet successfully"}
+
+    def add_products_to_closet(self, user_id, closet_name, products):
+        user_object_id = ObjectId(user_id)
+
+        # Retrieve the specified closet
+        closet = self.closets_collection.find_one({
+            'user_id': user_object_id,
+            'name': closet_name
+        })
+
+        if not closet:
+            return {"error": "Closet not found"}, 404
+
+        closet_id = closet['_id']
+        current_time = datetime.utcnow()
+        update_results = []
+
+        for product in products:
+            product_id = ObjectId(product['_id'])
+            product_type = 'outfit' if 'items' in product else 'item'
+
+            result = self.closets_collection.update_one(
+                {'_id': closet_id},
+                {'$addToSet': {
+                    'products': {
+                        'type': product_type,
+                        'id': product_id,
+                        'date_added': current_time
+                    }
+                }}
+            )
+
+            if result.modified_count > 0:
+                update_results.append(f"Product added to closet '{closet_name}'")
+            else:
+                update_results.append(f"Product already in closet '{closet_name}'")
+
+        return update_results
+
+    def get_products_not_in_closet(self, user_id, closet_name):
+        user_object_id = ObjectId(user_id)
+        
+        # Retrieve the specified closet
+        closet = self.closets_collection.find_one({
+            'user_id': user_object_id,
+            'name': closet_name
+        })
+
+        # Get the IDs of products already in the closet
+        existing_product_ids = {ObjectId(product['id']) for product in closet['products']}
+
+        # Retrieve all items and outfits
+        all_items = list(self.items_collection.find({ 'user_id': user_object_id }))
+        all_outfits = list(self.outfits_collection.find({ 'user_id': user_object_id }))
+
+        # Filter out items and outfits that are already in the closet
+        items_not_in_closet = [item for item in all_items if item['_id'] not in existing_product_ids]
+        outfits_not_in_closet = [outfit for outfit in all_outfits if outfit['_id'] not in existing_product_ids]
+
+        # Combine items and outfits
+        all_products_not_in_closet = items_not_in_closet + outfits_not_in_closet
+
+        # Sort the combined list by date_created field
+        all_products_not_in_closet.sort(key=lambda x: x['date_created'], reverse=True)
+
+        return all_products_not_in_closet
+
+

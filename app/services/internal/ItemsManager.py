@@ -59,10 +59,17 @@ class ItemsManager:
                 })
 
     def add_item_to_closets(self, item_id, closets):
+        current_time = datetime.utcnow()
         for closet in closets:
             self.closets_collection.update_one(
                 {'_id': ObjectId(closet['_id'])},
-                {'$addToSet': {'products': item_id}}
+                {'$addToSet': {
+                    'products': {
+                        'type': "item", 
+                        'id': item_id,
+                        'date_added': current_time,
+                    }
+                }}
             )
 
     def create_item(self, user_info, item_info, brand_info, closets):

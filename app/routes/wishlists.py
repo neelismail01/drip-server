@@ -43,3 +43,21 @@ def edit_wishlist_memberships(product_id, product_type):
     user_id = data.get("user_id")
     result = current_app.wishlists_manager.edit_wishlist_memberships(wishlists, user_id, product_id, product_type)
     return result
+
+@wishlists_blueprint.route("/edit_name", methods=["PUT"])
+def edit_wishlist_name():
+    data = request.json
+    user_id = data.get("user_id")
+    current_name = data.get("current_name")
+    new_name = data.get("new_name")
+    result = current_app.wishlists_manager.edit_wishlist_name(user_id, current_name, new_name)
+    return result
+
+@wishlists_blueprint.route("/products", methods=["DELETE"])
+def remove_products_from_wishlist():
+    data = request.json
+    user_id = data.get("user_id")
+    wishlist = data.get("wishlist")
+    products = data.get("products")
+    result = current_app.wishlists_manager.remove_products_from_wishlist(user_id, wishlist, products)
+    return result

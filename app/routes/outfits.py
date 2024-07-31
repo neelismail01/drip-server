@@ -31,17 +31,18 @@ def get_outfits_by_item(item_id):
 @outfits_blueprint.route('/', methods=["POST"])
 def create_outfit():
     data = request.json
-    user_id, preference, items, description, caption, media_urls = (
+    user_id, preference, items, description, caption, media_urls, closets = (
         data.get("user_id"),
         data.get("preference"),
         data.get("items"),
         data.get("description"),
         data.get("caption"),
-        data.get("mediaUrls")
+        data.get("mediaUrls"),
+        data.get("closets")
     )
     description_embedding = current_app.text_embeddings_manager.get_openai_text_embedding(description)
     result = current_app.outfits_manager.create_outfit(
-        user_id, preference, items, media_urls, description, caption, description_embedding
+        user_id, preference, items, media_urls, description, caption, description_embedding, closets
     )
     return result, 200
 
