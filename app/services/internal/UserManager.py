@@ -163,3 +163,49 @@ class UserManager:
             )
 
         return results
+
+    def get_liked_products(self, user_id):
+        user_object_id = ObjectId(user_id)
+        
+        liked_outfits = list(self.liked_items_collection.aggregate([
+            { "$match": {"liked_by": user_object_id, "post_type": "outfit" } },
+            {
+                "$lookup": {
+                    "from": "outfits",
+                    "localField": "post_id",
+                    "foreignField": "_id",
+                    "as": "outfit"
+                }
+            },
+            { "$unwind": "$outfit" },
+            { "$project": { "outfit": 1, "_id": 0, "date_created": "$outfit.date_created" } },
+            { "$replaceRoot": { "newRoot": "$outfit" } },
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "items",
+                    "foreignField": "_id",
+                    "as": "items"
+                }
+            }
+        ]))
+        
+        liked_items = list(self.liked_items_collection.aggregate([
+            { "$match": { "liked_by": user_object_id, "post_type": "item" } },
+            {
+                "$lookup": {
+                    "from": "items",
+                    "localField": "post_id",
+                    "foreignField": "_id",
+                    "as": "item"
+                }
+            },
+            { "$unwind": "$item" },
+            { "$project": { "item": 1, "_id": 0, "date_created": "$item.date_created" } },
+            { "$replaceRoot": { "newRoot": "$item" } }
+        ]))
+
+        combined_liked_products = liked_outfits + liked_items
+        sorted_liked_products = sorted(combined_liked_products, key=lambda x: x['date_created'], reverse=True)
+        
+        return sorted_liked_products

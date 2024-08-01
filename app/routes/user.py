@@ -89,3 +89,8 @@ def edit_user_profile():
     username = data.get("username")
     results = current_app.user_manager.edit_user_profile(user_id, name, username)
     return results
+
+@user_blueprint.route("/liked-products/<user_id>", methods=["GET"])
+def get_liked_products(user_id):
+    liked_products = current_app.user_manager.get_liked_products(user_id)
+    return json.dumps(liked_products, cls=MongoJSONEncoder)

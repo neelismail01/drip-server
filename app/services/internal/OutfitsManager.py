@@ -175,3 +175,26 @@ class OutfitsManager:
         outfit_object_id = ObjectId(outfit_id)
         outfit = self.outfits_collection.find_one({"_id": outfit_object_id, "user_id": user_object_id})
         return outfit is not None
+
+    def delete_outfit(self, outfit_id):
+        outfit_object_id = ObjectId(outfit_id)
+
+        # Delete outfit from outfits collection
+        self.outfits_collection.delete_one({'_id': outfit_object_id})
+
+        # Delete outfit from all closets in closets_collection
+        self.closets_collection.update_many(
+            {'products.id': outfit_object_id, 'products.type': 'outfit'},
+            {'$pull': {'products': {'id': outfit_object_id, 'type': 'outfit'}}}
+        )
+
+        # Delete outfit from all likes in liked_items_collection
+        self.liked_items_collection.delete_many({'post_id': outfit_object_id, 'post_type': 'outfit'})
+
+        # Delete outfit from all wishlists in wishlists_collection
+        self.wishlists_collection.update_many(
+            {'products.id': outfit_object_id, 'products.type': 'outfit'},
+            {'$pull': {'products': {'id': outfit_object_id, 'type': 'outfit'}}}
+        )
+
+        return "Outfit and all references deleted successfully"

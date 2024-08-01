@@ -117,3 +117,10 @@ def check_outfit_owned():
     outfit_id = request.args.get("outfit_id")
     owned = current_app.outfits_manager.check_outfit_owned(user_id, outfit_id)
     return json.dumps({"owned": owned}), 200
+
+@outfits_blueprint.route("/", methods=["DELETE"])
+def delete_outfit():
+    data = request.json
+    outfit_id = data.get("outfit_id")
+    result = current_app.outfits_manager.delete_outfit(outfit_id)
+    return result, 200

@@ -103,3 +103,10 @@ def check_item_owned():
     item_id = request.args.get("item_id")
     owned = current_app.items_manager.check_item_owned(user_id, item_id)
     return json.dumps({"owned": owned}), 200
+
+@items_blueprint.route("/", methods=["DELETE"])
+def delete_item():
+    data = request.json
+    item_id = data.get("item_id")
+    result = current_app.items_manager.delete_item(item_id)
+    return result, 200

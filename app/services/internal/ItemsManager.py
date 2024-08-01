@@ -6,6 +6,7 @@ class ItemsManager:
         self.db = mongo_client["drip"]
         self.users_collection = self.db["users"]
         self.items_collection = self.db["items"]
+        self.outfits_collection = self.db["outfits"]
         self.liked_items_collection = self.db["liked_items"]
         self.wishlists_collection = self.db["wishlists"]
         self.brands_collection = self.db['brands']
@@ -173,3 +174,55 @@ class ItemsManager:
         item_object_id = ObjectId(item_id)
         item = self.items_collection.find_one({"_id": item_object_id, "user_id": user_object_id})
         return item is not None
+
+    def delete_outfit_with_item(self, outfit_id):
+        outfit_object_id = ObjectId(outfit_id)
+
+        # Delete outfit from outfits collection
+        self.outfits_collection.delete_one({'_id': outfit_object_id})
+
+        # Delete outfit from all closets in closets_collection
+        self.closets_collection.update_many(
+            {'products.id': outfit_object_id, 'products.type': 'outfit'},
+            {'$pull': {'products': {'id': outfit_object_id, 'type': 'outfit'}}}
+        )
+
+        # Delete outfit from all likes in liked_items_collection
+        self.liked_items_collection.delete_many({'post_id': outfit_object_id, 'post_type': 'outfit'})
+
+        # Delete outfit from all wishlists in wishlists_collection
+        self.wishlists_collection.update_many(
+            {'products.id': outfit_object_id, 'products.type': 'outfit'},
+            {'$pull': {'products': {'id': outfit_object_id, 'type': 'outfit'}}}
+        )
+
+        return "Outfit and all references deleted successfully"
+
+    def delete_item(self, item_id):
+        item_object_id = ObjectId(item_id)
+
+        # Delete item from items collection
+        self.items_collection.delete_one({'_id': item_object_id})
+
+        # Delete item from all closets in closets_collection
+        self.closets_collection.update_many(
+            {'products.id': item_object_id, 'products.type': 'item'},
+            {'$pull': {'products': {'id': item_object_id, 'type': 'item'}}}
+        )
+
+        # Delete item from all likes in liked_items_collection
+        self.liked_items_collection.delete_many({'post_id': item_object_id, 'post_type': 'item'})
+
+        # Delete item from all wishlists in wishlists_collection
+        self.wishlists_collection.update_many(
+            {'products.id': item_object_id, 'products.type': 'item'},
+            {'$pull': {'products': {'id': item_object_id, 'type': 'item'}}}
+        )
+
+        # Delete all outfits containing this item in outfits_collection
+        outfits_containing_item = self.outfits_collection.find({'items': item_object_id})
+        for outfit in outfits_containing_item:
+            outfit_id = outfit['_id']
+            self.delete_outfit_with_item(outfit_id)
+
+        return "Item and all references deleted successfully"
