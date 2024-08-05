@@ -33,7 +33,10 @@ class UserManager:
             "profile_picture": DEFAULT_PROFILE_PICTURE,
             "username": None,
             "preference": None,
-            "birthdate": None
+            "birthdate": None,
+            "likes_private": False,
+            "collections_private": False,
+            "wishlists_private": False
         })
         user_id = result.inserted_id
         inserted_user = self.users_collection.find_one({"_id": user_id})
@@ -57,7 +60,12 @@ class UserManager:
         date_object = datetime.strptime(birthdate, '%Y-%m-%d')
         self.users_collection.update_one(
             { "_id": user_object_id },
-            { "$set": { "username": username, "preference": preference, "birthdate": date_object, "profile_complete": True } }
+            { "$set": { 
+                "username": username, 
+                "preference": preference, 
+                "birthdate": date_object, 
+                "profile_complete": True 
+            } }
         )
         updated_user = self.users_collection.find_one({"_id": user_object_id})
         return updated_user
@@ -209,3 +217,45 @@ class UserManager:
         sorted_liked_products = sorted(combined_liked_products, key=lambda x: x['date_created'], reverse=True)
         
         return sorted_liked_products
+
+    def update_likes_privacy(self, user_id, privacy_value):
+        user_object_id = ObjectId(user_id)
+        user = self.users_collection.find_one({ "_id": user_object_id })
+        
+        results = []
+        
+        self.users_collection.update_one(
+            { "_id": user_object_id },
+            { "$set": { "likes_private": privacy_value }}
+        )
+        results.append("Updated likes privacy")
+
+        return results
+
+    def update_collections_privacy(self, user_id, privacy_value):
+        user_object_id = ObjectId(user_id)
+        user = self.users_collection.find_one({ "_id": user_object_id })
+        
+        results = []
+        
+        self.users_collection.update_one(
+            { "_id": user_object_id },
+            { "$set": { "collections_private": privacy_value }}
+        )
+        results.append("Updated collections privacy")
+
+        return results
+
+    def update_wishlists_privacy(self, user_id, privacy_value):
+        user_object_id = ObjectId(user_id)
+        user = self.users_collection.find_one({ "_id": user_object_id })
+        
+        results = []
+        
+        self.users_collection.update_one(
+            { "_id": user_object_id },
+            { "$set": { "wishlists_private": privacy_value }}
+        )
+        results.append("Updated wish lists privacy")
+
+        return results

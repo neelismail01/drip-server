@@ -94,3 +94,27 @@ def edit_user_profile():
 def get_liked_products(user_id):
     liked_products = current_app.user_manager.get_liked_products(user_id)
     return json.dumps(liked_products, cls=MongoJSONEncoder)
+
+@user_blueprint.route("/update-likes-privacy", methods=["PUT"])
+def update_likes_privacy():
+    data = request.json
+    user_id = data.get("user_id")
+    privacy_value = data.get("privacy_value")
+    results = current_app.user_manager.update_likes_privacy(user_id, privacy_value)
+    return results
+
+@user_blueprint.route("/update-collections-privacy", methods=["PUT"])
+def update_collections_privacy():
+    data = request.json
+    user_id = data.get("user_id")
+    privacy_value = data.get("privacy_value")
+    results = current_app.user_manager.update_collections_privacy(user_id, privacy_value)
+    return results
+
+@user_blueprint.route("/update-wishlists-privacy", methods=["PUT"])
+def update_wishlists_privacy():
+    data = request.json
+    user_id = data.get("user_id")
+    privacy_value = data.get("privacy_value")
+    results = current_app.user_manager.update_wishlists_privacy(user_id, privacy_value)
+    return results
