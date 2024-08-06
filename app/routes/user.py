@@ -118,3 +118,10 @@ def update_wishlists_privacy():
     privacy_value = data.get("privacy_value")
     results = current_app.user_manager.update_wishlists_privacy(user_id, privacy_value)
     return results
+
+@user_blueprint.route("/delete-user", methods=["DELETE"])
+def delete_user():
+    data = request.json
+    user_id = data.get("user_id")
+    result = current_app.user_manager.delete_user(user_id)
+    return result
