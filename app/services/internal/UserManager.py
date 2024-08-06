@@ -10,8 +10,11 @@ class UserManager:
         self.outfits_collection = self.db["outfits"]
         self.brands_collection = self.db["brands"]
         self.liked_items_collection = self.db["liked_items"]
+        self.closets_collection = self.db["closets"]
         self.wishlists_collection = self.db["wishlists"]
         self.social_graph_collection = self.db["social_graph"]
+        self.assistant_chat_collection = self.db["assistant_chats"]
+        self.searches_collection = self.db["searches"]
 
     def get_user_by_email(self, email):
         user = self.users_collection.find_one({ "email": email })
@@ -259,3 +262,39 @@ class UserManager:
         results.append("Updated wish lists privacy")
 
         return results
+    
+    def delete_user(self, user_id):
+        user_object_id = ObjectId(user_id)
+        
+        # Delete user from user collection
+        self.users_collection.delete_one({'_id': user_object_id})
+
+        # Delete all items that user owns
+        self.items_collection.delete_many({'user_id': user_object_id})
+
+        # Delete all outfits user has created
+        self.outfits_collection.delete_many({'user_id': user_object_id})
+
+        # Delete all likes by this user_id
+        self.liked_items_collection.delete_many({'posted_by': user_object_id})
+
+        # Delete all likes of items/outfits posted by this user_id
+        self.liked_items_collection.delete_many({'liked_by': user_object_id})
+
+        # Delete all closets
+        self.closets_collection.delete_many({'user_id': user_object_id})
+
+        # Delete all wish lists
+        self.wishlists_collection.delete_many({'user_id': user_object_id})
+
+        # Delete all chats in assistant_chats collection
+        self.assistant_chat_collection.delete_many({'user_id': user_object_id})
+
+        # Delete all social_graph documents with this user_id
+        self.social_graph_collection.delete_many({"follower_id": user_object_id})
+        self.social_graph_collection.delete_many({"followee_id": user_object_id})
+
+        # Delete all searches with this user_id
+        self.searches_collection.delete_many({'user_id': user_object_id})
+
+        return "User successfully deleted"
