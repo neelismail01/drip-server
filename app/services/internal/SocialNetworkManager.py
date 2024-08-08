@@ -58,9 +58,9 @@ class SocialNetworkManager:
             },
             {
                 "$lookup": {
-                    "from": "users", 
-                    "localField": "follower_id", 
-                    "foreignField": "_id", 
+                    "from": "users",
+                    "localField": "follower_id",
+                    "foreignField": "_id",
                     "as": "follower_info"
                 }
             },
@@ -71,7 +71,7 @@ class SocialNetworkManager:
             },
             {
                 "$project": {
-                    "_id": 0,
+                    "_id": 1,
                     "id": {"$toString": "$follower_id"},
                     "name": "$follower_info.name",
                     "profile_picture": "$follower_info.profile_picture",
@@ -82,6 +82,11 @@ class SocialNetworkManager:
         ]
 
         follower_info = list(self.social_collection.aggregate(pipeline))
+
+        for follower in follower_info:
+            result = self.social_collection.find_one({ '_id': follower['_id'] })
+            follower['date_followed'] = result['date_created'].isoformat()
+
         return follower_info
 
     def get_all_following(self, user_id):
