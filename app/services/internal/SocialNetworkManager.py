@@ -86,7 +86,6 @@ class SocialNetworkManager:
         for follower in follower_info:
             result = self.social_collection.find_one({ '_id': follower['_id'] })
             follower['date_followed'] = result['date_created'].isoformat()
-            print(follower)
 
         return follower_info
 
